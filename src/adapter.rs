@@ -1,9 +1,6 @@
 use parking_lot::{Condvar, Mutex};
-use rusb::constants::LIBUSB_DT_HID;
-use rusb::{Context, Device, DeviceHandle, Hotplug, UsbContext};
-use std::convert::TryInto;
-use std::sync::Arc;
-use std::time::Duration;
+use rusb::{constants::LIBUSB_DT_HID, Context, Device, DeviceHandle, Hotplug, UsbContext};
+use std::{convert::TryInto, sync::Arc, time::Duration};
 
 const ADAPTER_VENDOR_ID: u16 = 0x057e;
 const ADAPTER_PRODUCT_ID: u16 = 0x0337;
@@ -48,25 +45,18 @@ impl GCAdapterWaiter {
             Some(ADAPTER_VENDOR_ID),
             Some(ADAPTER_PRODUCT_ID),
             None,
-            Box::new(HotplugCallback {
-                adapter: adapter.clone(),
-            }),
+            Box::new(HotplugCallback { adapter: adapter.clone() }),
         ) {
             Ok(reg) => {
                 println!("Using libusb hotplug detection");
                 Some(reg)
-            }
+            },
             Err(e) => {
                 println!("Couldn't initialize hotplug detection: {}", e);
                 None
-            }
+            },
         };
-        Ok(Self {
-            context,
-            adapter,
-            hotplug_reg,
-            newly_none: Arc::new(Mutex::new(false)),
-        })
+        Ok(Self { context, adapter, hotplug_reg, newly_none: Arc::new(Mutex::new(false)) })
     }
 
     pub fn try_connect_controller(&self) -> rusb::Result<Option<GCAdapter>> {
@@ -80,26 +70,35 @@ impl GCAdapterWaiter {
                 let mut handle = match device.open() {
                     Ok(handle) => handle,
                     Err(rusb::Error::Access) => {
-                        println!("ERROR: I don't have access to that device: Bus {:03} Device {:03}: ID {:04X}:{:04X}. Do you have Dolphin or another copy of this program running?", device.bus_number(), device.port_number(), descriptor.vendor_id(), descriptor.product_id());
+                        println!(
+                            "ERROR: I don't have access to that device: Bus {:03} Device {:03}: ID {:04X}:{:04X}.\
+                            Do you have Dolphin or another copy of this program running?",
+                            device.bus_number(),
+                            device.port_number(),
+                            descriptor.vendor_id(),
+                            descriptor.product_id()
+                        );
                         return None
-                    }
+                    },
                     Err(e) => {
                         println!("ERROR: couldn't open: {}", e);
                         return None
-                    }
+                    },
                 };
 
                 match handle.kernel_driver_active(0) {
-                    Ok(true) => if let Err(e) = handle.detach_kernel_driver(0) {
-                        println!("ERROR: couldn't detach kernel driver: {}", e);
-                        return None
-                    }
+                    Ok(true) => {
+                        if let Err(e) = handle.detach_kernel_driver(0) {
+                            println!("ERROR: couldn't detach kernel driver: {}", e);
+                            return None
+                        }
+                    },
                     Ok(false) => (),
                     Err(rusb::Error::NotSupported) => (),
                     Err(e) => {
                         println!("Error: couldn't check if kernel driver was active: {}", e);
                         return None
-                    }
+                    },
                 }
 
                 // nyko
@@ -116,7 +115,7 @@ impl GCAdapterWaiter {
                     Err(e) => {
                         println!("ERROR: couldn't claim interface: {}", e);
                         None
-                    }
+                    },
                 }
             } else {
                 None
@@ -128,7 +127,7 @@ impl GCAdapterWaiter {
                 for desc in int.descriptors() {
                     for ep in desc.endpoint_descriptors() {
                         match ep.direction() {
-                            rusb::Direction::In => endpoint_in = ep.address(), // save address
+                            rusb::Direction::In => endpoint_in = ep.address(),   // save address
                             rusb::Direction::Out => endpoint_out = ep.address(), // save address
                         }
                     }
@@ -137,11 +136,7 @@ impl GCAdapterWaiter {
 
             handle.write_interrupt(endpoint_out, &[0x13], Duration::from_millis(16))?;
 
-            Ok(Some(GCAdapter {
-                handle,
-                endpoint_in,
-                endpoint_out,
-            }))
+            Ok(Some(GCAdapter { handle, endpoint_in, endpoint_out }))
         } else {
             Ok(None)
         }
@@ -155,7 +150,7 @@ impl GCAdapterWaiter {
             *self.newly_none.lock() = true;
             *adapter_guard = Some(loop {
                 if let Some(adapter) = self.try_connect_controller().unwrap() {
-                    break adapter;
+                    break adapter
                 }
                 if self.hotplug_reg.is_some() {
                     cvar.wait(&mut adapter_guard);
@@ -175,16 +170,11 @@ impl GCAdapterWaiter {
             if *newly_none {
                 println!("GC adapter disconnected.");
                 *newly_none = false;
-                return Default::default();
+                return Default::default()
             } else {
                 drop(newly_none);
                 self.wait_for_controller();
-                self.adapter
-                    .0
-                    .lock()
-                    .as_ref()
-                    .map(GCAdapter::get_pads)
-                    .unwrap_or_default()
+                self.adapter.0.lock().as_ref().map(GCAdapter::get_pads).unwrap_or_default()
             }
         }
     }
@@ -206,15 +196,11 @@ pub struct GCAdapter {
 impl GCAdapter {
     pub fn get_pads(&self) -> [Option<GCPad>; 4] {
         let mut payload = [0; 37];
-        if self
-            .handle
-            .read_interrupt(self.endpoint_in, &mut payload, Duration::from_millis(16))
-            .unwrap()
-            != 37
+        if self.handle.read_interrupt(self.endpoint_in, &mut payload, Duration::from_millis(16)).unwrap() != 37
             || payload[0] != LIBUSB_DT_HID
         {
             // might happen a few times on init
-            return Default::default();
+            return Default::default()
         }
 
         let mut output = [None; 4];
@@ -239,8 +225,7 @@ impl GCAdapter {
 
     pub fn send_rumble(&self, rumble: [u8; 4]) -> rusb::Result<()> {
         let payload = [0x11, rumble[0], rumble[1], rumble[2], rumble[3]];
-        self.handle
-            .write_interrupt(self.endpoint_out, &payload, Duration::from_millis(16))?;
+        self.handle.write_interrupt(self.endpoint_out, &payload, Duration::from_millis(16))?;
         Ok(())
     }
 }

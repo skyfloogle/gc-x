@@ -1,9 +1,9 @@
-use std::ops::DerefMut;
-use std::pin::Pin;
-use std::ptr;
-use vigem::notification::X360Notification;
-use vigem::raw::{LPVOID, PVIGEM_CLIENT, PVIGEM_TARGET, UCHAR};
-use vigem::{Target, Vigem, VigemError};
+use std::{ops::DerefMut, pin::Pin, ptr};
+use vigem::{
+    notification::X360Notification,
+    raw::{LPVOID, PVIGEM_CLIENT, PVIGEM_TARGET, UCHAR},
+    Target, Vigem, VigemError,
+};
 
 pub struct NotificationHandle<'a> {
     target: PVIGEM_TARGET,
@@ -30,10 +30,7 @@ pub fn register_notification<'a, F: 'a + FnMut(X360Notification<()>)>(
     unsafe {
         let func: Box<dyn FnMut(X360Notification<()>)> = Box::new(func);
         let func: Box<dyn FnMut(X360Notification<()>) + 'static> = std::mem::transmute(func);
-        let mut handle = Pin::new(Box::new(NotificationHandle {
-            target: *target.raw,
-            func,
-        }));
+        let mut handle = Pin::new(Box::new(NotificationHandle { target: *target.raw, func }));
         let err = vigem::raw::vigem_target_x360_register_notification(
             **vigem.vigem,
             *target.raw,

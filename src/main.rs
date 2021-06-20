@@ -9,8 +9,8 @@ fn main() {
         Ok(waiter) => waiter,
         Err(rusb::Error::NotSupported) => {
             println!("ERROR: You haven't correctly installed the adapter driver.");
-            return;
-        }
+            return
+        },
         Err(e) => Err(e).unwrap(),
     };
     waiter.wait_for_controller();
@@ -19,8 +19,8 @@ fn main() {
         Ok(()) => (),
         Err(vigem::VigemError::BusNotFound) => {
             println!("ERROR: VigEmBus not found. You may need to install it.");
-            return;
-        }
+            return
+        },
         Err(e) => Err(e).unwrap(),
     }
     let targets = Mutex::new([None, None, None, None]);
@@ -28,11 +28,7 @@ fn main() {
     let rumbles = Mutex::new([0; 4]);
     loop {
         let pads = waiter.get_pads();
-        for ((pad_opt, target_opt), notif) in pads
-            .iter()
-            .zip(targets.lock().iter_mut())
-            .zip(&mut notif_handles)
-        {
+        for ((pad_opt, target_opt), notif) in pads.iter().zip(targets.lock().iter_mut()).zip(&mut notif_handles) {
             match (pad_opt, target_opt.as_ref()) {
                 (Some(_), None) => {
                     println!("New GC controller connected!");
@@ -44,9 +40,7 @@ fn main() {
                                 + u16::from(notif.small_motor) * (0x100 - 0x55))
                                 .to_be_bytes()[0];
                             let i = targets.lock().iter().position(|tg: &Option<Target>| {
-                                tg.as_ref()
-                                    .map(|tg| tg.index() == notif.get_target().index())
-                                    .unwrap_or(false)
+                                tg.as_ref().map(|tg| tg.index() == notif.get_target().index()).unwrap_or(false)
                             });
                             if let Some(i) = i {
                                 let mut rumbles = rumbles.lock();
@@ -57,13 +51,13 @@ fn main() {
                         .unwrap(),
                     );
                     *target_opt = Some(target);
-                }
+                },
                 (None, Some(target)) => {
                     println!("GC controller disconnected.");
                     vigem.target_remove(target).unwrap();
                     *target_opt = None;
                     *notif = None;
-                }
+                },
                 _ => (),
             }
             if let (Some(pad), Some(target)) = (pad_opt.as_ref(), target_opt.as_mut()) {
