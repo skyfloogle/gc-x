@@ -80,7 +80,7 @@ impl GCAdapterWaiter {
                 let mut handle = match device.open() {
                     Ok(handle) => handle,
                     Err(rusb::Error::Access) => {
-                        println!("ERROR: I don't have access to that device: Bus {:03} Device {:03}: ID {:04X}:{:04X}", device.bus_number(), device.port_number(), descriptor.vendor_id(), descriptor.product_id());
+                        println!("ERROR: I don't have access to that device: Bus {:03} Device {:03}: ID {:04X}:{:04X}. Do you have Dolphin or another copy of this program running?", device.bus_number(), device.port_number(), descriptor.vendor_id(), descriptor.product_id());
                         return None
                     }
                     Err(e) => {
