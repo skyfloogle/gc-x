@@ -1,23 +1,40 @@
+use parking_lot::Mutex;
 use vigem::{Target, TargetType, Vigem, XButton, XUSBReport};
 
 mod adapter;
 
 fn main() {
-    let waiter = adapter::GCAdapterWaiter::new().unwrap();
-    let adapter = waiter.try_connect_controller().unwrap().unwrap();
+    let waiter = match adapter::GCAdapterWaiter::new() {
+        Ok(waiter) => waiter,
+        Err(rusb::Error::NotSupported) => {
+            println!("ERROR: You haven't correctly installed the adapter driver.");
+            return;
+        }
+        Err(e) => Err(e).unwrap(),
+    };
+    waiter.wait_for_controller();
     let mut vigem = Vigem::new();
-    vigem.connect().unwrap();
-    let mut targets = [None, None, None, None];
+    match vigem.connect() {
+        Ok(()) => (),
+        Err(vigem::VigemError::BusNotFound) => {
+            println!("ERROR: VigEmBus not found. You may need to install it.");
+            return;
+        }
+        Err(e) => Err(e).unwrap(),
+    }
+    let targets = Mutex::new([None, None, None, None]);
     loop {
-        let pads = adapter.get_pads();
+        let pads = waiter.get_pads();
         for (pad_opt, target_opt) in pads.iter().zip(&mut targets) {
             match (pad_opt, target_opt.as_ref()) {
                 (Some(_), None) => {
+                    println!("New GC controller connected!");
                     let mut target = Target::new(TargetType::Xbox360);
                     vigem.target_add(&mut target).unwrap();
                     *target_opt = Some(target);
                 }
                 (None, Some(target)) => {
+                    println!("GC controller disconnected.");
                     vigem.target_remove(target).unwrap();
                     *target_opt = None;
                 }
