@@ -188,6 +188,13 @@ impl GCAdapterWaiter {
             }
         }
     }
+
+    pub fn send_rumble(&self, rumble: [u8; 4]) {
+        // nonblocking
+        if let Some(adapter) = self.adapter.0.lock().as_ref() {
+            let _ = adapter.send_rumble(rumble);
+        }
+    }
 }
 
 pub struct GCAdapter {
@@ -228,5 +235,12 @@ impl GCAdapter {
         }
 
         output
+    }
+
+    pub fn send_rumble(&self, rumble: [u8; 4]) -> rusb::Result<()> {
+        let payload = [0x11, rumble[0], rumble[1], rumble[2], rumble[3]];
+        self.handle
+            .write_interrupt(self.endpoint_out, &payload, Duration::from_millis(16))?;
+        Ok(())
     }
 }
