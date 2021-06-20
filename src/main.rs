@@ -5,6 +5,20 @@ mod adapter;
 mod notification;
 
 fn main() {
+    let deadzone: i16 = 0x100;
+    let mapping = [
+        XButton::A,             // A
+        XButton::B,             // B
+        XButton::X,             // X
+        XButton::Y,             // Y
+        XButton::DpadLeft,      // left
+        XButton::DpadRight,     // right
+        XButton::DpadDown,      // down
+        XButton::DpadUp,        // up
+        XButton::Start,         // start
+        XButton::RightShoulder, // Z
+    ];
+
     let waiter = match adapter::GCAdapterWaiter::new() {
         Ok(waiter) => waiter,
         Err(rusb::Error::NotSupported) => {
@@ -62,24 +76,14 @@ fn main() {
             }
             if let (Some(pad), Some(target)) = (pad_opt.as_ref(), target_opt.as_mut()) {
                 let mut w_buttons = XButton::empty();
-                let mut map_button = |bit: u16, but| {
+                for (bit, but) in mapping.iter().enumerate() {
                     if pad.buttons & (1 << bit) != 0 {
-                        w_buttons.insert(but)
+                        w_buttons.insert(*but);
                     }
-                };
-                map_button(0, XButton::A);
-                map_button(1, XButton::B);
-                map_button(2, XButton::X);
-                map_button(3, XButton::Y);
-                map_button(4, XButton::DpadLeft);
-                map_button(5, XButton::DpadRight);
-                map_button(6, XButton::DpadDown);
-                map_button(7, XButton::DpadUp);
-                map_button(8, XButton::Start);
-                map_button(9, XButton::RightShoulder);
+                }
 
                 let deadstick = |ax| match (i16::from(ax) - 0x80 << 8) + i16::from(ax) {
-                    ax if ax.abs() < 0x100 => 0,
+                    ax if ax.abs() < deadzone => 0,
                     ax => ax,
                 };
 
