@@ -1,10 +1,15 @@
-use parking_lot::Mutex;
+#![windows_subsystem = "windows"]
+
+use parking_lot::{Mutex, Once};
+use std::sync::Arc;
 use vigem::{Target, TargetType, Vigem, XButton, XUSBReport};
 
 mod adapter;
 mod notification;
+mod ui;
 
 fn main() {
+    let exit_once = Arc::new(Once::new());
     let deadzone: i16 = 0x100;
     let mapping = [
         XButton::A,             // A
@@ -19,37 +24,70 @@ fn main() {
         XButton::RightShoulder, // Z
     ];
 
-    let waiter = match adapter::GCAdapterWaiter::new() {
+    let waiter = match adapter::GCAdapterWaiter::new(exit_once.clone()) {
         Ok(waiter) => waiter,
         Err(rusb::Error::NotSupported) => {
-            println!("ERROR: You haven't correctly installed the adapter driver.");
+            ui::show_error(
+                "Error: GC Adapter driver not installed",
+                "You haven't correctly installed the adapter driver.",
+            );
             return
         },
-        Err(e) => Err(e).unwrap(),
+        Err(e) => {
+            ui::show_error("Error", &format!("Could not initialize libusb: {}", e));
+            return
+        },
     };
-    waiter.wait_for_controller();
     let mut vigem = Vigem::new();
-    match vigem.connect() {
-        Ok(()) => (),
-        Err(vigem::VigemError::BusNotFound) => {
-            println!("ERROR: VigEmBus not found. You may need to install it.");
-            return
-        },
-        Err(e) => Err(e).unwrap(),
+    if let Err(e) = vigem.connect() {
+        match e {
+            vigem::VigemError::BusNotFound => {
+                ui::show_error("Error: VigEmBus not found", "VigEmBus not found. You may need to install it.")
+            },
+            e => ui::show_error("Error", &format!("Could not connect to VigEmBus: {}", e)),
+        }
+        return
     }
-    let targets = Mutex::new([None, None, None, None]);
+    let targets = Arc::new(Mutex::new([None, None, None, None]));
     let mut notif_handles = [None, None, None, None];
-    let rumbles = Mutex::new([0; 4]);
+    let rumbles = Arc::new(Mutex::new([0; 4]));
+
+    // start UI
+    if let Err(e) = std::thread::Builder::new().name("GUI".into()).spawn({
+        let exit_once = exit_once.clone();
+        move || {
+            let res = ui::init_app(exit_once.clone());
+            exit_once.call_once(|| ());
+            if let Err(e) = res {
+                ui::show_error("Could not initialize UI", &format!("Could not initialize UI: {}", e));
+            }
+        }
+    }) {
+        ui::show_error("Could not start UI thread", &format!("Could not start UI thread: {}\nI will now exit.", e));
+        return
+    }
+
+    if exit_once.state().done() {
+        return
+    }
+
     loop {
         let pads = waiter.get_pads();
+        if exit_once.state().done() {
+            break
+        }
         for ((pad_opt, target_opt), notif) in pads.iter().zip(targets.lock().iter_mut()).zip(&mut notif_handles) {
             match (pad_opt, target_opt.as_ref()) {
                 (Some(_), None) => {
                     println!("New GC controller connected!");
                     let mut target = Target::new(TargetType::Xbox360);
                     vigem.target_add(&mut target).unwrap();
+
+                    let rumbles = rumbles.clone();
+                    let targets = targets.clone();
+                    let waiter = &waiter;
                     *notif = Some(
-                        notification::register_notification(&mut vigem, &target, |notif| {
+                        notification::register_notification(&mut vigem, &target, move |notif| {
                             let rumble = (u16::from(notif.large_motor) * 0x55
                                 + u16::from(notif.small_motor) * (0x100 - 0x55))
                                 > 0x800;

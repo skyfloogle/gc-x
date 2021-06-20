@@ -1,7 +1,7 @@
 // This is based on Dolphin's code for handling the GC adapter.
 // https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/InputCommon/GCAdapter.cpp
 
-use parking_lot::{Condvar, Mutex};
+use parking_lot::{Condvar, Mutex, Once};
 use rusb::{constants::LIBUSB_DT_HID, Context, Device, DeviceHandle, Hotplug, UsbContext};
 use std::{convert::TryInto, sync::Arc, time::Duration};
 
@@ -24,6 +24,7 @@ pub struct GCAdapterWaiter {
     adapter: Arc<(Mutex<Option<GCAdapter>>, Condvar)>,
     hotplug_reg: Option<rusb::Registration<rusb::Context>>,
     newly_none: Arc<Mutex<bool>>,
+    exit_once: Arc<Once>,
 }
 
 struct HotplugCallback {
@@ -41,7 +42,7 @@ impl Hotplug<rusb::Context> for HotplugCallback {
 }
 
 impl GCAdapterWaiter {
-    pub fn new() -> rusb::Result<Self> {
+    pub fn new(exit_once: Arc<Once>) -> rusb::Result<Self> {
         let context = rusb::Context::new()?;
         let adapter = Arc::new((Mutex::new(None), Condvar::new()));
         let hotplug_reg = if rusb::has_hotplug() {
@@ -64,7 +65,7 @@ impl GCAdapterWaiter {
             println!("libusb hotplug detection not supported.");
             None
         };
-        Ok(Self { context, adapter, hotplug_reg, newly_none: Arc::new(Mutex::new(false)) })
+        Ok(Self { context, adapter, hotplug_reg, newly_none: Arc::new(Mutex::new(false)), exit_once })
     }
 
     pub fn try_connect_controller(&self) -> rusb::Result<Option<GCAdapter>> {
@@ -157,6 +158,9 @@ impl GCAdapterWaiter {
             println!("Waiting for GC adapter...");
             *self.newly_none.lock() = true;
             *adapter_guard = Some(loop {
+                if self.exit_once.state().done() {
+                    return
+                }
                 if let Some(adapter) = self.try_connect_controller().unwrap() {
                     break adapter
                 }
