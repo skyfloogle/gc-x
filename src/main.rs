@@ -8,8 +8,8 @@ fn main() {
     let deadzone: i16 = 0x100;
     let mapping = [
         XButton::A,             // A
-        XButton::B,             // B
-        XButton::X,             // X
+        XButton::X,             // B
+        XButton::B,             // X
         XButton::Y,             // Y
         XButton::DpadLeft,      // left
         XButton::DpadRight,     // right
