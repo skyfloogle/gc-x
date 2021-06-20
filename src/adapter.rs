@@ -219,7 +219,7 @@ impl GCAdapter {
 
         let mut output = [None; 4];
         for (i, chunk) in payload[1..].chunks_exact(9).enumerate() {
-            if chunk[0] != 0 {
+            if chunk[0] >> 4 != 0 {
                 output[i] = Some(GCPad {
                     buttons: u16::from_le_bytes(chunk[1..3].try_into().unwrap()),
                     stick_x: chunk[3],
