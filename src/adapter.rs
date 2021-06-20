@@ -1,3 +1,6 @@
+// This is based on Dolphin's code for handling the GC adapter.
+// https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/InputCommon/GCAdapter.cpp
+
 use parking_lot::{Condvar, Mutex};
 use rusb::{constants::LIBUSB_DT_HID, Context, Device, DeviceHandle, Hotplug, UsbContext};
 use std::{convert::TryInto, sync::Arc, time::Duration};
