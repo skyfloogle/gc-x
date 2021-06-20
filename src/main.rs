@@ -78,7 +78,10 @@ fn main() {
                 map_button(8, XButton::Start);
                 map_button(9, XButton::RightShoulder);
 
-                let deadstick = |ax| (i16::from(ax) - 0x80) << 8;
+                let deadstick = |ax| match (i16::from(ax) - 0x80 << 8) + i16::from(ax) {
+                    ax if ax.abs() < 0x100 => 0,
+                    ax => ax,
+                };
 
                 let report = XUSBReport {
                     w_buttons,
