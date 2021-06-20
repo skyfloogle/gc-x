@@ -6,4 +6,4 @@ edition = "2018"
 [dependencies]
 parking_lot = "0.11"
 rusb = "0.8"
-vigem = "0.9"
+vigem = { git = "https://github.com/skyfloogle/vigem.git", branch = "fix-error-codes" }
