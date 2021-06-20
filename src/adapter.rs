@@ -41,20 +41,25 @@ impl GCAdapterWaiter {
     pub fn new() -> rusb::Result<Self> {
         let context = rusb::Context::new()?;
         let adapter = Arc::new((Mutex::new(None), Condvar::new()));
-        let hotplug_reg = match context.register_callback(
-            Some(ADAPTER_VENDOR_ID),
-            Some(ADAPTER_PRODUCT_ID),
-            None,
-            Box::new(HotplugCallback { adapter: adapter.clone() }),
-        ) {
-            Ok(reg) => {
-                println!("Using libusb hotplug detection");
-                Some(reg)
-            },
-            Err(e) => {
-                println!("Couldn't initialize hotplug detection: {}", e);
-                None
-            },
+        let hotplug_reg = if rusb::has_hotplug() {
+            match context.register_callback(
+                Some(ADAPTER_VENDOR_ID),
+                Some(ADAPTER_PRODUCT_ID),
+                None,
+                Box::new(HotplugCallback { adapter: adapter.clone() }),
+            ) {
+                Ok(reg) => {
+                    println!("Using libusb hotplug detection.");
+                    Some(reg)
+                },
+                Err(e) => {
+                    println!("Couldn't initialize libusb hotplug detection: {}", e);
+                    None
+                },
+            }
+        } else {
+            println!("libusb hotplug detection not supported.");
+            None
         };
         Ok(Self { context, adapter, hotplug_reg, newly_none: Arc::new(Mutex::new(false)) })
     }
