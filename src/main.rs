@@ -38,13 +38,13 @@ fn main() {
                         notification::register_notification(&mut vigem, &target, |notif| {
                             let rumble = (u16::from(notif.large_motor) * 0x55
                                 + u16::from(notif.small_motor) * (0x100 - 0x55))
-                                .to_be_bytes()[0];
+                                > 0x800;
                             let i = targets.lock().iter().position(|tg: &Option<Target>| {
                                 tg.as_ref().map(|tg| tg.index() == notif.get_target().index()).unwrap_or(false)
                             });
                             if let Some(i) = i {
                                 let mut rumbles = rumbles.lock();
-                                rumbles[i] = rumble;
+                                rumbles[i] = rumble.into();
                                 waiter.send_rumble(rumbles.clone());
                             }
                         })

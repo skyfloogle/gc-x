@@ -190,7 +190,9 @@ impl GCAdapterWaiter {
     pub fn send_rumble(&self, rumble: [u8; 4]) {
         // nonblocking
         if let Some(adapter) = self.adapter.0.lock().as_ref() {
-            let _ = adapter.send_rumble(rumble);
+            if let Err(e) = adapter.send_rumble(rumble) {
+                println!("ERROR: sending rumble failed: {}", e);
+            }
         }
     }
 }
@@ -204,11 +206,13 @@ pub struct GCAdapter {
 impl GCAdapter {
     pub fn get_pads(&self) -> [Option<GCPad>; 4] {
         let mut payload = [0; 37];
-        if self.handle.read_interrupt(self.endpoint_in, &mut payload, Duration::from_millis(16)).unwrap() != 37
-            || payload[0] != LIBUSB_DT_HID
-        {
-            // might happen a few times on init
-            return Default::default()
+        match self.handle.read_interrupt(self.endpoint_in, &mut payload, Duration::from_millis(16)) {
+            Ok(37) if payload[0] == LIBUSB_DT_HID => (),
+            Ok(_) => return Default::default(), // might happen a few times on init
+            Err(e) => {
+                println!("Failed to read from adapter: {}", e);
+                return Default::default()
+            },
         }
 
         let mut output = [None; 4];
