@@ -41,7 +41,7 @@ impl Daemon {
     }
 
     pub fn run(&mut self) {
-        let deadzone: i16 = 0x100;
+        let deadzone: i16 = 0xc00;
         let mapping = [
             XButton::A,             // A
             XButton::X,             // B
@@ -58,16 +58,25 @@ impl Daemon {
         let targets = Arc::new(Mutex::new([None, None, None, None]));
         let mut notif_handles = [None, None, None, None];
         let rumbles = Arc::new(Mutex::new([0; 4]));
+        let mut centers: [((i16, i16), (i16, i16)); 4] = Default::default();
+
+        let transform = |ax| (i16::from(ax) - 0x80 << 8) + i16::from(ax);
 
         loop {
             let pads = self.waiter.get_pads();
             if self.exit_once.state().done() {
                 break
             }
-            for ((pad_opt, target_opt), notif) in pads.iter().zip(targets.lock().iter_mut()).zip(&mut notif_handles) {
+            for (((pad_opt, target_opt), notif), center) in
+                pads.iter().zip(targets.lock().iter_mut()).zip(&mut notif_handles).zip(&mut centers)
+            {
                 match (pad_opt, target_opt.as_ref()) {
-                    (Some(_), None) => {
+                    (Some(pad), None) => {
                         self.logger.log("New GC controller connected!");
+                        *center = (
+                            (transform(pad.stick_x), transform(pad.stick_y)),
+                            (transform(pad.cstick_x), transform(pad.cstick_y)),
+                        );
                         let mut target = Target::new(TargetType::Xbox360);
                         self.vigem.target_add(&mut target).unwrap();
 
@@ -108,7 +117,7 @@ impl Daemon {
                         }
                     }
 
-                    let deadstick = |ax| match (i16::from(ax) - 0x80 << 8) + i16::from(ax) {
+                    let deadstick = |ax, center: i16| match transform(ax) - center {
                         ax if ax.abs() < deadzone => 0,
                         ax => ax,
                     };
@@ -117,10 +126,10 @@ impl Daemon {
                         w_buttons,
                         b_left_trigger: pad.trigger_left,
                         b_right_trigger: pad.trigger_right,
-                        s_thumb_lx: deadstick(pad.stick_x),
-                        s_thumb_ly: deadstick(pad.stick_y),
-                        s_thumb_rx: deadstick(pad.cstick_x),
-                        s_thumb_ry: deadstick(pad.cstick_y),
+                        s_thumb_lx: deadstick(pad.stick_x, center.0.0),
+                        s_thumb_ly: deadstick(pad.stick_y, center.0.1),
+                        s_thumb_rx: deadstick(pad.cstick_x, center.1.0),
+                        s_thumb_ry: deadstick(pad.cstick_y, center.1.1),
                     };
                     target.update(&report).unwrap();
                 }
