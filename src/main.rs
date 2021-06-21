@@ -11,13 +11,14 @@ mod ui;
 fn main() {
     let exit_once = Arc::new(Once::new());
 
-    let ui::UiInfo { logger, join_sender, leave_sender, app } = match ui::init_app(exit_once.clone()) {
+    let ui = match ui::init_app(exit_once.clone()) {
         Ok(ui) => ui,
         Err(e) => {
             ui::show_error("Could not initialize UI", &format!("Could not initialize UI: {}", e));
             return
         },
     };
+    let logger = ui.logger.clone();
 
     let wait_for_init = Arc::new((Mutex::new(false), Condvar::new()));
 
