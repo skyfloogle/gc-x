@@ -1,7 +1,7 @@
 use native_windows_derive::NwgUi;
 use native_windows_gui as nwg;
 use nwg::NativeUi;
-use parking_lot::Once;
+use parking_lot::{Mutex, Once};
 use std::sync::Arc;
 
 #[derive(Default, NwgUi)]
@@ -12,9 +12,21 @@ pub struct App {
     #[nwg_resource(source_embed: Some(&data.embed_resource), source_embed_str: Some("icon"))]
     icon: nwg::Icon,
 
-    #[nwg_control(title: "gc-adapter", icon: Some(&data.icon), flags: "WINDOW")]
+    #[nwg_control(title: "gc-adapter", icon: Some(&data.icon))]
     #[nwg_events(OnInit: [App::show_welcome], OnWindowClose: [App::exit])]
     window: nwg::Window,
+
+    #[nwg_layout(parent: window)]
+    layout: nwg::FlexboxLayout,
+
+    #[nwg_control(readonly: true, size: (400, 400))]
+    log: nwg::TextBox,
+
+    #[nwg_control()]
+    #[nwg_events(OnNotice: [App::update_log])]
+    log_notice: nwg::Notice,
+
+    log_buf: Arc<Mutex<String>>,
 
     #[nwg_control(popup: true)]
     tray_popup: nwg::Menu,
@@ -32,6 +44,16 @@ pub struct App {
     #[nwg_control(tip: Some("gc-adapter"), icon: Some(&data.icon))]
     #[nwg_events(OnContextMenu: [App::right_click(SELF)])]
     pub tray: nwg::TrayNotification,
+
+    #[nwg_control()]
+    #[nwg_events(OnNotice: [App::controller_join])]
+    pub join_notice: nwg::Notice,
+
+    #[nwg_control()]
+    #[nwg_events(OnNotice: [App::controller_leave])]
+    pub leave_notice: nwg::Notice,
+
+    pub exit_once: Arc<Once>,
 }
 
 impl App {
@@ -44,17 +66,59 @@ impl App {
         self.tray.show("gc-adapter runs via the taskbar.", None, None, None);
     }
 
+    fn update_log(&self) {
+        self.log.set_text(self.log_buf.lock().as_ref());
+    }
+
+    fn controller_join(&self) {
+        self.tray.show("New controller connected", None, None, None);
+    }
+
+    fn controller_leave(&self) {
+        self.tray.show("Controller disconnected", None, None, None);
+    }
+
     fn exit(&self) {
         nwg::stop_thread_dispatch();
+        self.exit_once.call_once(|| ());
     }
 }
 
-pub fn init_app(exit_once: Arc<Once>) -> Result<(), nwg::NwgError> {
-    nwg::init()?;
-    let _app = App::build_ui(Default::default())?;
+pub struct UiInfo {
+    pub app: app_ui::AppUi,
+    pub logger: Logger,
+    pub join_sender: nwg::NoticeSender,
+    pub leave_sender: nwg::NoticeSender,
+}
+
+pub fn run_ui() {
     nwg::dispatch_thread_events();
-    exit_once.call_once(|| ());
-    Ok(())
+}
+
+pub fn init_app(exit_once: Arc<Once>) -> Result<UiInfo, nwg::NwgError> {
+    nwg::init()?;
+    let app = App {
+        embed_resource: Default::default(),
+        icon: Default::default(),
+        window: Default::default(),
+        layout: Default::default(),
+        log: Default::default(),
+        log_notice: Default::default(),
+        log_buf: Arc::new(Default::default()),
+        tray_popup: Default::default(),
+        popup_title: Default::default(),
+        sep: Default::default(),
+        exit_item: Default::default(),
+        tray: Default::default(),
+        join_notice: Default::default(),
+        leave_notice: Default::default(),
+        exit_once,
+    };
+    let app = App::build_ui(app)?;
+    let logger = Logger { buf: app.log_buf.clone(), sender: app.log_notice.sender() };
+    let join_sender = app.join_notice.sender();
+    let leave_sender = app.leave_notice.sender();
+    Ok(UiInfo { app, logger, join_sender, leave_sender })
 }
 
 pub fn show_error(title: &str, content: &str) {
@@ -65,4 +129,20 @@ pub fn show_error(title: &str, content: &str) {
         buttons: nwg::MessageButtons::Ok,
         icons: nwg::MessageIcons::Error,
     });
+}
+
+#[derive(Clone)]
+pub struct Logger {
+    buf: Arc<Mutex<String>>,
+    sender: nwg::NoticeSender,
+}
+
+impl Logger {
+    pub fn log(&self, text: &str) {
+        println!("{}", text);
+        let mut buf = self.buf.lock();
+        buf.push_str(text);
+        buf.push_str("\r\n");
+        self.sender.notice();
+    }
 }
