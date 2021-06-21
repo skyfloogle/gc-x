@@ -2,19 +2,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut res = winres::WindowsResource::new();
     // placeholder icon
     // https://iconarchive.com/show/gentle-edges-icons-by-pixelkit/Game-Controller-icon.html
-    res.set_icon_with_id("assets/icon.ico", "icon").set_manifest(
-        r#"
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
-  <asmv3:application>
-    <asmv3:windowsSettings>
-      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>
-      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
-    </asmv3:windowsSettings>
-  </asmv3:application>
-</assembly>
-"#,
-    );
+    res.set_icon_with_id("assets/icon.ico", "icon");
     res.compile()?;
 
     Ok(())
