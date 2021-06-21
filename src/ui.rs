@@ -67,7 +67,32 @@ impl App {
     }
 
     fn update_log(&self) {
-        self.log.set_text(self.log_buf.lock().as_ref());
+        use std::os::windows::ffi::OsStrExt;
+        use winapi::um::winuser::EM_REPLACESEL;
+
+        let sel = self.log.selection();
+
+        // move cursor to end (log.len() won't include the newlines so it's bad)
+        let end = self.log.text().len() as u32;
+        self.log.set_selection(end..end);
+        // get text
+        let mut text = self.log_buf.lock();
+        // convert to utf-16
+        let osstr: &std::ffi::OsStr = text.as_ref();
+        let utf: Vec<_> = osstr.encode_wide().chain(Some(0u16).into_iter()).collect();
+        // paste new text at the end
+        unsafe {
+            winapi::um::winuser::SendMessageW(
+                self.log.handle.hwnd().unwrap(),
+                EM_REPLACESEL as u32,
+                false.into(),
+                utf.as_ptr() as _,
+            );
+        }
+        // clear buffer
+        text.clear();
+        // move selection back to where it was before
+        self.log.set_selection(sel);
     }
 
     fn controller_join(&self) {

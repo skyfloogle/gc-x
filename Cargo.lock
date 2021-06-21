@@ -29,6 +29,7 @@ dependencies = [
  "parking_lot",
  "rusb",
  "vigem",
+ "winapi",
  "winres",
 ]
 
