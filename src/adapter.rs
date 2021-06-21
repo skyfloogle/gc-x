@@ -177,11 +177,13 @@ impl GCAdapterWaiter {
     }
 
     pub fn get_pads(&self) -> [Option<GCPad>; 4] {
-        let adapter = self.adapter.0.lock();
-        if let Some(adapter) = adapter.as_ref() {
-            adapter.get_pads(&self.logger)
+        let adapter_lock = self.adapter.0.lock();
+        let out = if let Some(adapter) = adapter_lock.as_ref() {
+            let out = adapter.get_pads(&self.logger);
+            drop(adapter_lock);
+            out
         } else {
-            drop(adapter);
+            drop(adapter_lock);
             let mut newly_none = self.newly_none.lock();
             if *newly_none {
                 self.logger.log("GC adapter disconnected.");
@@ -192,6 +194,13 @@ impl GCAdapterWaiter {
                 self.wait_for_controller();
                 self.adapter.0.lock().as_ref().map(|ad| ad.get_pads(&self.logger)).unwrap_or_default()
             }
+        };
+        if let Some(out) = out {
+            out
+        } else {
+            *self.newly_none.lock() = false;
+            *self.adapter.0.lock() = None;
+            Default::default()
         }
     }
 
@@ -212,14 +221,22 @@ pub struct GCAdapter {
 }
 
 impl GCAdapter {
-    pub fn get_pads(&self, logger: &ui::Logger) -> [Option<GCPad>; 4] {
+    pub fn get_pads(&self, logger: &ui::Logger) -> Option<[Option<GCPad>; 4]> {
         let mut payload = [0; 37];
         match self.handle.read_interrupt(self.endpoint_in, &mut payload, Duration::from_millis(16)) {
             Ok(37) if payload[0] == LIBUSB_DT_HID => (),
-            Ok(_) => return Default::default(), // might happen a few times on init
+            Ok(_) => return Some(Default::default()), // might happen a few times on init
+            Err(rusb::Error::NoDevice) => {
+                logger.log("GC adapter disconnected.");
+                return None
+            },
+            Err(rusb::Error::Pipe) => {
+                logger.log("Endpoint halted, will attempt to reconnect.");
+                return None
+            },
             Err(e) => {
                 logger.log(&format!("Failed to read from adapter: {}", e));
-                return Default::default()
+                return Some(Default::default())
             },
         }
 
@@ -240,7 +257,7 @@ impl GCAdapter {
             }
         }
 
-        output
+        Some(output)
     }
 
     pub fn send_rumble(&self, rumble: [u8; 4]) -> rusb::Result<()> {
