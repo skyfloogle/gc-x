@@ -92,19 +92,19 @@ pub struct Port {
     #[nwg_layout_item(layout: layout, col: 1, row: 9)]
     recenter_check: nwg::CheckBox,
 
-    #[nwg_control(text: "P1")]
+    #[nwg_control(text: "P1", enabled: false)]
     #[nwg_layout_item(layout: layout, col: 0, row: 10)]
     recenter_p1: nwg::Button,
 
-    #[nwg_control(text: "P2")]
+    #[nwg_control(text: "P2", enabled: false)]
     #[nwg_layout_item(layout: layout, col: 1, row: 10)]
     recenter_p2: nwg::Button,
 
-    #[nwg_control(text: "P3")]
+    #[nwg_control(text: "P3", enabled: false)]
     #[nwg_layout_item(layout: layout, col: 0, row: 11)]
     recenter_p3: nwg::Button,
 
-    #[nwg_control(text: "P4")]
+    #[nwg_control(text: "P4", enabled: false)]
     #[nwg_layout_item(layout: layout, col: 1, row: 11)]
     recenter_p4: nwg::Button,
 
@@ -112,11 +112,11 @@ pub struct Port {
     #[nwg_layout_item(layout: layout, col: 0, row: 12, col_span: 2)]
     tray_check: nwg::CheckBox,
 
-    #[nwg_control(text: "Revert changes")]
+    #[nwg_control(text: "Revert changes", enabled: false)]
     #[nwg_layout_item(layout: layout, col: 0, row: 13, col_span: 2)]
     revert_button: nwg::Button,
 
-    #[nwg_control(text: "Save changes")]
+    #[nwg_control(text: "Save changes", enabled: false)]
     #[nwg_layout_item(layout: layout, col: 0, row: 14, col_span: 2)]
     save_button: nwg::Button,
 }
@@ -170,6 +170,13 @@ pub struct App {
         (recenter_p2, OnButtonClick): [App::recenter_p2],
         (recenter_p3, OnButtonClick): [App::recenter_p3],
         (recenter_p4, OnButtonClick): [App::recenter_p4],
+        (a_map, OnComboxBoxSelection): [App::modify],
+        (b_map, OnComboxBoxSelection): [App::modify],
+        (x_map, OnComboxBoxSelection): [App::modify],
+        (y_map, OnComboxBoxSelection): [App::modify],
+        (z_map, OnComboxBoxSelection): [App::modify],
+        (tray_check, OnButtonClick): [App::modify],
+        (recenter_check, OnButtonClick): [App::modify],
         (revert_button, OnButtonClick): [App::revert_config],
         (save_button, OnButtonClick): [App::save_config],
     )]
@@ -230,10 +237,18 @@ impl App {
 
     fn show_welcome(&self) {
         self.revert_config();
+        self.port.revert_button.set_enabled(false);
+        self.port.save_button.set_enabled(false);
+    }
+
+    fn modify(&self) {
+        self.port.revert_button.set_enabled(true);
+        self.port.save_button.set_enabled(true);
     }
 
     fn set_deadzone(&self, new_deadzone: u8, set_textbox: bool) {
         if let Some(mut deadzone) = self.deadzone.try_lock() {
+            self.modify();
             *deadzone = new_deadzone;
             self.port.deadzone_slider.set_pos(new_deadzone as _);
             if set_textbox {
@@ -282,6 +297,8 @@ impl App {
         } else {
             CheckBoxState::Unchecked
         });
+        self.port.revert_button.set_enabled(false);
+        self.port.save_button.set_enabled(false);
     }
 
     fn save_config(&self) {
@@ -301,6 +318,8 @@ impl App {
         config.deadzone = *self.deadzone.lock();
         config.auto_recenter = self.port.recenter_check.check_state() == CheckBoxState::Checked;
         config.close_to_tray = self.port.tray_check.check_state() == CheckBoxState::Checked;
+        self.port.revert_button.set_enabled(false);
+        self.port.save_button.set_enabled(false);
     }
 
     fn update_log(&self) {
