@@ -4,6 +4,7 @@ use parking_lot::{Condvar, Mutex, Once};
 use std::sync::Arc;
 
 mod adapter;
+mod config;
 mod daemon;
 mod notification;
 mod ui;
@@ -11,7 +12,13 @@ mod ui;
 fn main() {
     let exit_once = Arc::new(Once::new());
 
-    let ui = match ui::init_app(exit_once.clone()) {
+    let config = Arc::new(Mutex::new(Default::default()));
+
+    let must_center = Arc::new(Mutex::new([false; 4]));
+
+    let joy_connected = Arc::new(Mutex::new([false; 4]));
+
+    let ui = match ui::init_app(exit_once.clone(), config.clone(), must_center.clone(), joy_connected.clone()) {
         Ok(ui) => ui,
         Err(e) => {
             ui::show_error("Could not initialize UI", &format!("Could not initialize UI: {}", e));
@@ -27,8 +34,18 @@ fn main() {
         .spawn({
             let wait_for_init = wait_for_init.clone();
             let exit_once = exit_once.clone();
+            let join_sender = ui.join_sender;
+            let leave_sender = ui.leave_sender;
             move || {
-                let mut daemon = match daemon::Daemon::new(exit_once.clone(), logger.clone()) {
+                let mut daemon = match daemon::Daemon::new(
+                    exit_once.clone(),
+                    logger.clone(),
+                    config,
+                    must_center,
+                    joy_connected,
+                    join_sender,
+                    leave_sender,
+                ) {
                     Ok(daemon) => daemon,
                     Err(()) => {
                         exit_once.call_once(|| ());

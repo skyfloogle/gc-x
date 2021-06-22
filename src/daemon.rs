@@ -1,4 +1,9 @@
-use crate::{adapter::GCAdapterWaiter, notification, ui};
+use crate::{
+    adapter::GCAdapterWaiter,
+    config::{self, Config},
+    notification, ui,
+};
+use native_windows_gui as nwg;
 use parking_lot::{Mutex, Once};
 use std::sync::Arc;
 use vigem::{Target, TargetType, Vigem, XButton, XUSBReport};
@@ -8,10 +13,23 @@ pub struct Daemon {
     waiter: GCAdapterWaiter,
     vigem: Vigem,
     logger: ui::Logger,
+    config: Arc<Mutex<Config>>,
+    must_center: Arc<Mutex<[bool; 4]>>,
+    joy_connected: Arc<Mutex<[bool; 4]>>,
+    join_sender: nwg::NoticeSender,
+    leave_sender: nwg::NoticeSender,
 }
 
 impl Daemon {
-    pub fn new(exit_once: Arc<Once>, logger: ui::Logger) -> Result<Self, ()> {
+    pub fn new(
+        exit_once: Arc<Once>,
+        logger: ui::Logger,
+        config: Arc<Mutex<Config>>,
+        must_center: Arc<Mutex<[bool; 4]>>,
+        joy_connected: Arc<Mutex<[bool; 4]>>,
+        join_sender: nwg::NoticeSender,
+        leave_sender: nwg::NoticeSender,
+    ) -> Result<Self, ()> {
         // all fallible initialization goes here
         let waiter = match GCAdapterWaiter::new(exit_once.clone(), logger.clone()) {
             Ok(waiter) => waiter,
@@ -37,24 +55,10 @@ impl Daemon {
             }
             return Err(())
         }
-        Ok(Self { exit_once, waiter, vigem, logger })
+        Ok(Self { exit_once, waiter, vigem, logger, config, must_center, joy_connected, join_sender, leave_sender })
     }
 
     pub fn run(&mut self) {
-        let deadzone: i16 = 0xc00;
-        let mapping = [
-            XButton::A,             // A
-            XButton::X,             // B
-            XButton::B,             // X
-            XButton::Y,             // Y
-            XButton::DpadLeft,      // left
-            XButton::DpadRight,     // right
-            XButton::DpadDown,      // down
-            XButton::DpadUp,        // up
-            XButton::Start,         // start
-            XButton::RightShoulder, // Z
-        ];
-
         let targets = Arc::new(Mutex::new([None, None, None, None]));
         let mut notif_handles = [None, None, None, None];
         let rumbles = Arc::new(Mutex::new([0; 4]));
@@ -67,16 +71,21 @@ impl Daemon {
             if self.exit_once.state().done() {
                 break
             }
-            for (((pad_opt, target_opt), notif), center) in
-                pads.iter().zip(targets.lock().iter_mut()).zip(&mut notif_handles).zip(&mut centers)
-            {
+            for (pad_opt, target_opt, notif, center, must_center, connected) in itertools::izip!(
+                &pads,
+                targets.lock().iter_mut(),
+                &mut notif_handles,
+                &mut centers,
+                self.must_center.lock().iter_mut(),
+                self.joy_connected.lock().iter_mut()
+            ) {
                 match (pad_opt, target_opt.as_ref()) {
-                    (Some(pad), None) => {
+                    (Some(_), None) => {
                         self.logger.log("New GC controller connected!");
-                        *center = (
-                            (transform(pad.stick_x), transform(pad.stick_y)),
-                            (transform(pad.cstick_x), transform(pad.cstick_y)),
-                        );
+                        *center = ((0, 0), (0, 0));
+                        *must_center = self.config.lock().auto_recenter;
+                        *connected = true;
+                        self.join_sender.notice();
                         let mut target = Target::new(TargetType::Xbox360);
                         self.vigem.target_add(&mut target).unwrap();
 
@@ -106,19 +115,40 @@ impl Daemon {
                         self.vigem.target_remove(target).unwrap();
                         *target_opt = None;
                         *notif = None;
+                        *connected = false;
+                        self.leave_sender.notice();
                     },
                     _ => (),
                 }
                 if let (Some(pad), Some(target)) = (pad_opt.as_ref(), target_opt.as_mut()) {
                     let mut w_buttons = XButton::empty();
-                    for (bit, but) in mapping.iter().enumerate() {
-                        if pad.buttons & (1 << bit) != 0 {
+                    // dpad
+                    for (i, but) in
+                        [XButton::DpadLeft, XButton::DpadRight, XButton::DpadDown, XButton::DpadUp].iter().enumerate()
+                    {
+                        if pad.buttons & (0x10 << i) != 0 {
                             w_buttons.insert(*but);
                         }
                     }
+                    for (gc, xb) in self.config.lock().buttons.iter().enumerate() {
+                        if pad.buttons & config::GBUTTONS[gc].1 != 0 {
+                            w_buttons.insert(config::XBUTTONS[*xb].1);
+                        }
+                    }
+
+                    if *must_center {
+                        *center = (
+                            (transform(pad.stick_x), transform(pad.stick_y)),
+                            (transform(pad.cstick_x), transform(pad.cstick_y)),
+                        );
+                    }
 
                     let deadstick = |ax, center: i16| match transform(ax) - center {
-                        ax if ax.abs() < deadzone => 0,
+                        ax if ax.abs()
+                            < (f32::from(i16::MAX) * f32::from(self.config.lock().deadzone) / 100.0) as _ =>
+                        {
+                            0
+                        },
                         ax => ax,
                     };
 

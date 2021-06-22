@@ -1,8 +1,12 @@
+use crate::config::{xbutton_names, Config};
 use native_windows_derive::{NwgPartial, NwgUi};
 use native_windows_gui as nwg;
-use native_windows_gui::stretch::{
-    geometry::Size,
-    style::{Dimension, FlexDirection},
+use native_windows_gui::{
+    stretch::{
+        geometry::Size,
+        style::{Dimension, FlexDirection},
+    },
+    CheckBoxState, NumberSelectData,
 };
 use nwg::NativeUi;
 use parking_lot::{Mutex, Once};
@@ -10,71 +14,105 @@ use std::sync::Arc;
 
 const FULL_SIZE: Size<Dimension> = Size { width: Dimension::Percent(1.0), height: Dimension::Percent(1.0) };
 
-const BUTTONS: [&str; 10] = ["A", "B", "X", "Y", "LB", "RB", "Back", "Start", "LS", "RS"];
-
 #[derive(Default, NwgPartial)]
 pub struct Port {
-    #[nwg_layout(flex_direction: FlexDirection::Column)]
-    layout: nwg::FlexboxLayout,
+    #[nwg_layout()]
+    layout: nwg::GridLayout,
 
     #[nwg_control(text: "Deadzone")]
-    #[nwg_layout_item(layout: layout)]
+    #[nwg_layout_item(layout: layout, col: 0, row: 0, col_span: 2)]
     deadzone_label: nwg::Label,
 
     #[nwg_control(flags: "VISIBLE")]
-    #[nwg_layout_item(layout: layout)]
+    #[nwg_layout_item(layout: layout, col: 0, row: 1, col_span: 2)]
     deadzone_frame: nwg::Frame,
 
     #[nwg_control(parent: deadzone_frame, value_int: 5, min_int: 0, max_int: 100)]
     deadzone_select: nwg::NumberSelect,
 
+    #[nwg_control(text: "Button mapping")]
+    #[nwg_layout_item(layout: layout, col: 0, row: 2, col_span: 2)]
+    map_label: nwg::Label,
+
     #[nwg_control(text: "A")]
-    #[nwg_layout_item(layout: layout)]
+    #[nwg_layout_item(layout: layout, col: 0, row: 3)]
     a_label: nwg::Label,
 
-    #[nwg_control(collection: BUTTONS.to_vec(), selected_index: Some(0))]
-    #[nwg_layout_item(layout: layout)]
+    #[nwg_control(collection: xbutton_names(), selected_index: Some(0))]
+    #[nwg_layout_item(layout: layout, col: 0, row: 4)]
     a_map: nwg::ComboBox<&'static str>,
 
     #[nwg_control(text: "B")]
-    #[nwg_layout_item(layout: layout)]
+    #[nwg_layout_item(layout: layout, col: 1, row: 3)]
     b_label: nwg::Label,
 
-    #[nwg_control(collection: BUTTONS.to_vec(), selected_index: Some(2))]
-    #[nwg_layout_item(layout: layout)]
+    #[nwg_control(collection: xbutton_names(), selected_index: Some(2))]
+    #[nwg_layout_item(layout: layout, col: 1, row: 4)]
     b_map: nwg::ComboBox<&'static str>,
 
     #[nwg_control(text: "X")]
-    #[nwg_layout_item(layout: layout)]
+    #[nwg_layout_item(layout: layout, col: 0, row: 5)]
     x_label: nwg::Label,
 
-    #[nwg_control(collection: BUTTONS.to_vec(), selected_index: Some(1))]
-    #[nwg_layout_item(layout: layout)]
+    #[nwg_control(collection: xbutton_names(), selected_index: Some(1))]
+    #[nwg_layout_item(layout: layout, col: 0, row: 6)]
     x_map: nwg::ComboBox<&'static str>,
 
     #[nwg_control(text: "Y")]
-    #[nwg_layout_item(layout: layout)]
+    #[nwg_layout_item(layout: layout, col: 1, row: 5)]
     y_label: nwg::Label,
 
-    #[nwg_control(collection: BUTTONS.to_vec(), selected_index: Some(3))]
-    #[nwg_layout_item(layout: layout)]
+    #[nwg_control(collection: xbutton_names(), selected_index: Some(3))]
+    #[nwg_layout_item(layout: layout, col: 1, row: 6)]
     y_map: nwg::ComboBox<&'static str>,
 
     #[nwg_control(text: "Z")]
-    #[nwg_layout_item(layout: layout)]
+    #[nwg_layout_item(layout: layout, col: 0, row: 7)]
     z_label: nwg::Label,
 
-    #[nwg_control(collection: BUTTONS.to_vec(), selected_index: Some(5))]
-    #[nwg_layout_item(layout: layout)]
+    #[nwg_control(collection: xbutton_names(), selected_index: Some(5))]
+    #[nwg_layout_item(layout: layout, col: 0, row: 8)]
     z_map: nwg::ComboBox<&'static str>,
 
     #[nwg_control(text: "Start")]
-    #[nwg_layout_item(layout: layout)]
+    #[nwg_layout_item(layout: layout, col: 1, row: 7)]
     st_label: nwg::Label,
 
-    #[nwg_control(collection: BUTTONS.to_vec(), selected_index: Some(7))]
-    #[nwg_layout_item(layout: layout)]
+    #[nwg_control(collection: xbutton_names(), selected_index: Some(7))]
+    #[nwg_layout_item(layout: layout, col: 1, row: 8)]
     st_map: nwg::ComboBox<&'static str>,
+
+    #[nwg_control(text: "Recenter:")]
+    #[nwg_layout_item(layout: layout, col: 0, row: 9)]
+    recenter_label: nwg::Label,
+
+    #[nwg_control(text: "On join")]
+    #[nwg_layout_item(layout: layout, col: 1, row: 9)]
+    recenter_check: nwg::CheckBox,
+
+    #[nwg_control(text: "P1")]
+    #[nwg_layout_item(layout: layout, col: 0, row: 10)]
+    recenter_p1: nwg::Button,
+
+    #[nwg_control(text: "P2")]
+    #[nwg_layout_item(layout: layout, col: 1, row: 10)]
+    recenter_p2: nwg::Button,
+
+    #[nwg_control(text: "P3")]
+    #[nwg_layout_item(layout: layout, col: 0, row: 11)]
+    recenter_p3: nwg::Button,
+
+    #[nwg_control(text: "P4")]
+    #[nwg_layout_item(layout: layout, col: 1, row: 11)]
+    recenter_p4: nwg::Button,
+
+    #[nwg_control(text: "Revert changes")]
+    #[nwg_layout_item(layout: layout, col: 0, row: 12, col_span: 2)]
+    revert_button: nwg::Button,
+
+    #[nwg_control(text: "Save changes")]
+    #[nwg_layout_item(layout: layout, col: 0, row: 13, col_span: 2)]
+    save_button: nwg::Button,
 }
 
 #[derive(Default, NwgUi)]
@@ -115,10 +153,18 @@ pub struct App {
     log_buf: Arc<Mutex<String>>,
 
     #[nwg_control()]
-    #[nwg_layout_item(layout: main_layout, size: Size { width: Dimension::Points(175.0), height: Dimension::Auto })]
+    #[nwg_layout_item(layout: main_layout, size: Size { width: Dimension::Points(250.0), height: Dimension::Auto })]
     port_frame: nwg::Frame,
 
     #[nwg_partial(parent: port_frame)]
+    #[nwg_events(
+        (revert_button, OnButtonClick): [App::revert_config],
+        (save_button, OnButtonClick): [App::save_config],
+        (recenter_p1, OnButtonClick): [App::recenter_p1(SELF)],
+        (recenter_p2, OnButtonClick): [App::recenter_p2(SELF)],
+        (recenter_p3, OnButtonClick): [App::recenter_p3(SELF)],
+        (recenter_p4, OnButtonClick): [App::recenter_p4(SELF)],
+    )]
     port: Port,
 
     #[nwg_control(popup: true)]
@@ -147,6 +193,11 @@ pub struct App {
     pub leave_notice: nwg::Notice,
 
     pub exit_once: Arc<Once>,
+
+    config: Arc<Mutex<Config>>,
+
+    must_center: Arc<Mutex<[bool; 4]>>,
+    joy_connected: Arc<Mutex<[bool; 4]>>,
 }
 
 impl App {
@@ -157,6 +208,56 @@ impl App {
 
     fn show_welcome(&self) {
         self.tray.show("gc-adapter runs via the taskbar.", None, None, None);
+        self.revert_config();
+    }
+
+    fn revert_config(&self) {
+        let config = self.config.lock();
+        self.port.deadzone_select.set_data(NumberSelectData::Int {
+            value: config.deadzone.into(),
+            step: 1,
+            max: 100,
+            min: 0,
+        });
+        for (but, cb) in config.buttons.iter().zip([
+            &self.port.a_map,
+            &self.port.b_map,
+            &self.port.x_map,
+            &self.port.y_map,
+            &self.port.z_map,
+            &self.port.st_map,
+        ]) {
+            cb.set_selection(Some(*but));
+        }
+        self.port.recenter_check.set_check_state(if config.auto_recenter {
+            CheckBoxState::Checked
+        } else {
+            CheckBoxState::Unchecked
+        });
+    }
+
+    fn save_config(&self) {
+        let mut config = self.config.lock();
+        for (but, cb) in config.buttons.iter_mut().zip([
+            &self.port.a_map,
+            &self.port.b_map,
+            &self.port.x_map,
+            &self.port.y_map,
+            &self.port.z_map,
+            &self.port.st_map,
+        ]) {
+            if let Some(sel) = cb.selection() {
+                *but = sel;
+            }
+        }
+        config.deadzone = match self.port.deadzone_select.data() {
+            NumberSelectData::Int { value, .. } => value as _,
+            _ => {
+                show_error("Weird number format", "Deadzone is somehow a float?");
+                panic!("deadzone is a float somehow");
+            },
+        };
+        config.auto_recenter = self.port.recenter_check.check_state() == CheckBoxState::Checked;
     }
 
     fn update_log(&self) {
@@ -188,12 +289,42 @@ impl App {
         self.log.set_selection(sel);
     }
 
+    fn recenter(&self, id: usize) {
+        self.must_center.lock()[id] = true;
+    }
+
+    fn recenter_p1(&self) {
+        self.recenter(0);
+    }
+
+    fn recenter_p2(&self) {
+        self.recenter(1);
+    }
+
+    fn recenter_p3(&self) {
+        self.recenter(2);
+    }
+
+    fn recenter_p4(&self) {
+        self.recenter(3);
+    }
+
     fn controller_join(&self) {
         self.tray.show("New controller connected", None, None, None);
+        let joy_connected = self.joy_connected.lock();
+        self.port.recenter_p1.set_enabled(joy_connected[0]);
+        self.port.recenter_p2.set_enabled(joy_connected[1]);
+        self.port.recenter_p3.set_enabled(joy_connected[2]);
+        self.port.recenter_p4.set_enabled(joy_connected[3]);
     }
 
     fn controller_leave(&self) {
         self.tray.show("Controller disconnected", None, None, None);
+        let joy_connected = self.joy_connected.lock();
+        self.port.recenter_p1.set_enabled(joy_connected[0]);
+        self.port.recenter_p2.set_enabled(joy_connected[1]);
+        self.port.recenter_p3.set_enabled(joy_connected[2]);
+        self.port.recenter_p4.set_enabled(joy_connected[3]);
     }
 
     fn exit(&self) {
@@ -213,7 +344,12 @@ pub fn run_ui() {
     nwg::dispatch_thread_events();
 }
 
-pub fn init_app(exit_once: Arc<Once>) -> Result<UiInfo, nwg::NwgError> {
+pub fn init_app(
+    exit_once: Arc<Once>,
+    config: Arc<Mutex<Config>>,
+    must_center: Arc<Mutex<[bool; 4]>>,
+    joy_connected: Arc<Mutex<[bool; 4]>>,
+) -> Result<UiInfo, nwg::NwgError> {
     nwg::init()?;
     let app = App {
         embed_resource: Default::default(),
@@ -236,6 +372,9 @@ pub fn init_app(exit_once: Arc<Once>) -> Result<UiInfo, nwg::NwgError> {
         join_notice: Default::default(),
         leave_notice: Default::default(),
         exit_once,
+        config,
+        must_center,
+        joy_connected,
     };
     let app = App::build_ui(app)?;
     let logger = Logger { buf: app.log_buf.clone(), sender: app.log_notice.sender() };
