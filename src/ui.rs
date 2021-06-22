@@ -6,11 +6,12 @@ use native_windows_gui::{
         geometry::Size,
         style::{Dimension, FlexDirection},
     },
-    CheckBoxState, NumberSelectData,
+    CheckBoxState,
 };
 use nwg::NativeUi;
 use parking_lot::{Mutex, Once};
 use std::sync::Arc;
+use winapi::um::playsoundapi::{PlaySoundA, SND_ALIAS_ID, SND_ASYNC};
 
 const FULL_SIZE: Size<Dimension> = Size { width: Dimension::Percent(1.0), height: Dimension::Percent(1.0) };
 
@@ -20,15 +21,16 @@ pub struct Port {
     layout: nwg::GridLayout,
 
     #[nwg_control(text: "Deadzone")]
-    #[nwg_layout_item(layout: layout, col: 0, row: 0, col_span: 2)]
+    #[nwg_layout_item(layout: layout, col: 0, row: 0)]
     deadzone_label: nwg::Label,
 
-    #[nwg_control(flags: "VISIBLE")]
-    #[nwg_layout_item(layout: layout, col: 0, row: 1, col_span: 2)]
-    deadzone_frame: nwg::Frame,
+    #[nwg_control]
+    #[nwg_layout_item(layout: layout, col: 1, row: 0)]
+    deadzone_text: nwg::TextInput,
 
-    #[nwg_control(parent: deadzone_frame, value_int: 5, min_int: 0, max_int: 100)]
-    deadzone_select: nwg::NumberSelect,
+    #[nwg_control()]
+    #[nwg_layout_item(layout: layout, col: 0, row: 1, col_span: 2)]
+    deadzone_slider: nwg::TrackBar,
 
     #[nwg_control(text: "Button mapping")]
     #[nwg_layout_item(layout: layout, col: 0, row: 2, col_span: 2)]
@@ -201,6 +203,7 @@ pub struct App {
     pub exit_once: Arc<Once>,
 
     config: Arc<Mutex<Config>>,
+    deadzone: Mutex<u8>,
 
     must_center: Arc<Mutex<[bool; 4]>>,
     joy_connected: Arc<Mutex<[bool; 4]>>,
@@ -229,14 +232,36 @@ impl App {
         self.revert_config();
     }
 
+    fn set_deadzone(&self, new_deadzone: u8, set_textbox: bool) {
+        if let Some(mut deadzone) = self.deadzone.try_lock() {
+            *deadzone = new_deadzone;
+            self.port.deadzone_slider.set_pos(new_deadzone as _);
+            if set_textbox {
+                self.port.deadzone_text.set_text(&new_deadzone.to_string());
+            }
+        }
+    }
+
+    fn change_deadzone_textbox(&self) {
+        let text = self.port.deadzone_text.text();
+        if !text.is_empty() {
+            match text.parse() {
+                Ok(deadzone) if deadzone <= 100 => self.set_deadzone(deadzone, false),
+                _ => unsafe {
+                    // play windows asterisk sound
+                    PlaySoundA(0x4453 as _, std::ptr::null_mut(), SND_ASYNC | SND_ALIAS_ID);
+                },
+            }
+        }
+    }
+
+    fn change_deadzone_slider(&self) {
+        self.set_deadzone(self.port.deadzone_slider.pos() as _, true);
+    }
+
     fn revert_config(&self) {
         let config = self.config.lock();
-        self.port.deadzone_select.set_data(NumberSelectData::Int {
-            value: config.deadzone.into(),
-            step: 1,
-            max: 100,
-            min: 0,
-        });
+        self.set_deadzone(config.deadzone, true);
         for (but, cb) in config.buttons.iter().zip([
             &self.port.a_map,
             &self.port.b_map,
@@ -273,13 +298,7 @@ impl App {
                 *but = sel;
             }
         }
-        config.deadzone = match self.port.deadzone_select.data() {
-            NumberSelectData::Int { value, .. } => value as _,
-            _ => {
-                show_error("Weird number format", "Deadzone is somehow a float?");
-                panic!("deadzone is a float somehow");
-            },
-        };
+        config.deadzone = *self.deadzone.lock();
         config.auto_recenter = self.port.recenter_check.check_state() == CheckBoxState::Checked;
         config.close_to_tray = self.port.tray_check.check_state() == CheckBoxState::Checked;
     }
@@ -397,6 +416,7 @@ pub fn init_app(
         leave_notice: Default::default(),
         exit_once,
         config,
+        deadzone: Default::default(),
         must_center,
         joy_connected,
     };
