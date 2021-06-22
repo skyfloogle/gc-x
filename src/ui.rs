@@ -106,12 +106,16 @@ pub struct Port {
     #[nwg_layout_item(layout: layout, col: 1, row: 11)]
     recenter_p4: nwg::Button,
 
-    #[nwg_control(text: "Revert changes")]
+    #[nwg_control(text: "Collapse to tray")]
     #[nwg_layout_item(layout: layout, col: 0, row: 12, col_span: 2)]
+    tray_check: nwg::CheckBox,
+
+    #[nwg_control(text: "Revert changes")]
+    #[nwg_layout_item(layout: layout, col: 0, row: 13, col_span: 2)]
     revert_button: nwg::Button,
 
     #[nwg_control(text: "Save changes")]
-    #[nwg_layout_item(layout: layout, col: 0, row: 13, col_span: 2)]
+    #[nwg_layout_item(layout: layout, col: 0, row: 14, col_span: 2)]
     save_button: nwg::Button,
 }
 
@@ -124,7 +128,7 @@ pub struct App {
     icon: nwg::Icon,
 
     #[nwg_control(title: "gc-adapter", icon: Some(&data.icon))]
-    #[nwg_events(OnInit: [App::show_welcome], OnWindowClose: [App::exit])]
+    #[nwg_events(OnInit: [App::show_welcome], OnWindowClose: [App::close_window])]
     window: nwg::Window,
 
     #[nwg_layout(parent: window, flex_direction: FlexDirection::Row)]
@@ -158,12 +162,14 @@ pub struct App {
 
     #[nwg_partial(parent: port_frame)]
     #[nwg_events(
+        (deadzone_text, OnTextInput): [App::change_deadzone_textbox],
+        (deadzone_slider, OnHorizontalScroll): [App::change_deadzone_slider],
+        (recenter_p1, OnButtonClick): [App::recenter_p1],
+        (recenter_p2, OnButtonClick): [App::recenter_p2],
+        (recenter_p3, OnButtonClick): [App::recenter_p3],
+        (recenter_p4, OnButtonClick): [App::recenter_p4],
         (revert_button, OnButtonClick): [App::revert_config],
         (save_button, OnButtonClick): [App::save_config],
-        (recenter_p1, OnButtonClick): [App::recenter_p1(SELF)],
-        (recenter_p2, OnButtonClick): [App::recenter_p2(SELF)],
-        (recenter_p3, OnButtonClick): [App::recenter_p3(SELF)],
-        (recenter_p4, OnButtonClick): [App::recenter_p4(SELF)],
     )]
     port: Port,
 
@@ -181,7 +187,7 @@ pub struct App {
     exit_item: nwg::MenuItem,
 
     #[nwg_control(tip: Some("gc-adapter"), icon: Some(&data.icon))]
-    #[nwg_events(OnContextMenu: [App::right_click(SELF)])]
+    #[nwg_events(OnContextMenu: [App::right_click], MousePressLeftUp: [App::revive_window])]
     pub tray: nwg::TrayNotification,
 
     #[nwg_control]
@@ -206,8 +212,20 @@ impl App {
         self.tray_popup.popup(x, y);
     }
 
+    fn revive_window(&self) {
+        self.window.restore();
+        self.revert_config();
+    }
+
+    fn close_window(&self) {
+        if self.config.lock().close_to_tray {
+            self.tray.show("gc-adapter runs via the taskbar.", None, None, None);
+        } else {
+            self.exit();
+        }
+    }
+
     fn show_welcome(&self) {
-        self.tray.show("gc-adapter runs via the taskbar.", None, None, None);
         self.revert_config();
     }
 
@@ -230,6 +248,11 @@ impl App {
             cb.set_selection(Some(*but));
         }
         self.port.recenter_check.set_check_state(if config.auto_recenter {
+            CheckBoxState::Checked
+        } else {
+            CheckBoxState::Unchecked
+        });
+        self.port.tray_check.set_check_state(if config.close_to_tray {
             CheckBoxState::Checked
         } else {
             CheckBoxState::Unchecked
@@ -258,6 +281,7 @@ impl App {
             },
         };
         config.auto_recenter = self.port.recenter_check.check_state() == CheckBoxState::Checked;
+        config.close_to_tray = self.port.tray_check.check_state() == CheckBoxState::Checked;
     }
 
     fn update_log(&self) {

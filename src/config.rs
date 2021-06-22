@@ -25,10 +25,11 @@ pub struct Config {
     pub buttons: [usize; 6],
     pub auto_recenter: bool,
     pub deadzone: u8,
+    pub close_to_tray: bool,
 }
 
 impl Default for Config {
     fn default() -> Self {
-        Self { buttons: [0, 2, 1, 3, 5, 7], auto_recenter: true, deadzone: 5 }
+        Self { buttons: [0, 2, 1, 3, 5, 7], auto_recenter: true, deadzone: 5, close_to_tray: true }
     }
 }
