@@ -1,17 +1,17 @@
 use crate::{
     adapter::GCAdapterWaiter,
-    config::{self, Config},
-    notification, ui,
+    config::{self, Config, GButton, XButton},
+    ui,
 };
 use native_windows_gui as nwg;
 use parking_lot::{Mutex, Once};
 use std::sync::Arc;
-use vigem::{Target, TargetType, Vigem, XButton, XUSBReport};
+use vigem::{Target, UsbReport};
 
 pub struct Daemon {
     exit_once: Arc<Once>,
     waiter: GCAdapterWaiter,
-    vigem: Vigem,
+    vigem: vigem::Client,
     logger: ui::Logger,
     config: Arc<Mutex<Config>>,
     must_center: Arc<Mutex<[bool; 4]>>,
@@ -45,10 +45,10 @@ impl Daemon {
                 return Err(())
             },
         };
-        let mut vigem = Vigem::new();
+        let mut vigem = vigem::Client::new();
         if let Err(e) = vigem.connect() {
             match e {
-                vigem::VigemError::BusNotFound => {
+                vigem::Error::BusNotFound => {
                     ui::show_error("Error: VigEmBus not found", "VigEmBus not found. You may need to install it.")
                 },
                 e => ui::show_error("Error", &format!("Could not connect to VigEmBus: {}", e)),
@@ -66,7 +66,7 @@ impl Daemon {
 
         let transform = |ax| (i16::from(ax) - 0x80 << 8) + i16::from(ax);
 
-        loop {
+        'outer: loop {
             let pads = self.waiter.get_pads();
             if self.exit_once.state().done() {
                 break
@@ -79,40 +79,49 @@ impl Daemon {
                 self.must_center.lock().iter_mut(),
                 self.joy_connected.lock().iter_mut()
             ) {
-                match (pad_opt, target_opt.as_ref()) {
+                match (pad_opt, target_opt.as_mut()) {
                     (Some(_), None) => {
                         self.logger.log("New GC controller connected!");
                         *center = ((0, 0), (0, 0));
                         *must_center = self.config.lock().auto_recenter;
                         *connected = true;
                         self.join_sender.notice();
-                        let mut target = Target::new(TargetType::Xbox360);
-                        self.vigem.target_add(&mut target).unwrap();
+                        let mut target = Target::new();
+                        if let Err(e) = self.vigem.add_target(&mut target) {
+                            self.logger.log(&format!("Could not add target: {}", e));
+                            continue 'outer
+                        }
 
                         let rumbles = rumbles.clone();
                         let targets = targets.clone();
                         let waiter = &self.waiter;
-                        *notif = Some(
-                            notification::register_notification(&mut self.vigem, &target, move |notif| {
-                                let rumble = (u16::from(notif.large_motor) * 0x55
-                                    + u16::from(notif.small_motor) * (0x100 - 0x55))
-                                    > 0x800;
+                        *notif = match target.register_notification(
+                            move |target: &Target, large_motor: u8, small_motor: u8| {
+                                let rumble =
+                                    (u16::from(large_motor) * 0x55 + u16::from(small_motor) * (0x100 - 0x55)) > 0x800;
                                 let i = targets.lock().iter().position(|tg: &Option<Target>| {
-                                    tg.as_ref().map(|tg| tg.index() == notif.get_target().index()).unwrap_or(false)
+                                    tg.as_ref().map(|tg| tg.index() == target.index()).unwrap_or(false)
                                 });
                                 if let Some(i) = i {
                                     let mut rumbles = rumbles.lock();
                                     rumbles[i] = rumble.into();
                                     waiter.send_rumble(rumbles.clone());
                                 }
-                            })
-                            .unwrap(),
-                        );
+                            },
+                        ) {
+                            Ok(handle) => Some(handle),
+                            Err(e) => {
+                                self.logger.log(&format!("Could not register rumble notification: {}", e));
+                                None
+                            },
+                        };
                         *target_opt = Some(target);
                     },
                     (None, Some(target)) => {
                         self.logger.log("GC controller disconnected.");
-                        self.vigem.target_remove(target).unwrap();
+                        if let Err(e) = self.vigem.remove_target(target) {
+                            self.logger.log(&format!("Failed to remove target: {}", e));
+                        }
                         *target_opt = None;
                         *notif = None;
                         *connected = false;
@@ -121,18 +130,21 @@ impl Daemon {
                     _ => (),
                 }
                 if let (Some(pad), Some(target)) = (pad_opt.as_ref(), target_opt.as_mut()) {
-                    let mut w_buttons = XButton::empty();
+                    let mut buttons = XButton::empty();
                     // dpad
-                    for (i, but) in
-                        [XButton::DpadLeft, XButton::DpadRight, XButton::DpadDown, XButton::DpadUp].iter().enumerate()
-                    {
-                        if pad.buttons & (0x10 << i) != 0 {
-                            w_buttons.insert(*but);
+                    for (gc, xb) in [
+                        (GButton::DPAD_LEFT, XButton::DPAD_LEFT),
+                        (GButton::DPAD_RIGHT, XButton::DPAD_RIGHT),
+                        (GButton::DPAD_UP, XButton::DPAD_UP),
+                        (GButton::DPAD_DOWN, XButton::DPAD_DOWN),
+                    ] {
+                        if pad.buttons.contains(gc) {
+                            buttons.insert(xb);
                         }
                     }
                     for (gc, xb) in self.config.lock().buttons.iter().enumerate() {
-                        if pad.buttons & config::GBUTTONS[gc].1 != 0 {
-                            w_buttons.insert(config::XBUTTONS[*xb].1);
+                        if pad.buttons.contains(config::GBUTTONS[gc].1) {
+                            buttons.insert(config::XBUTTONS[*xb].1);
                         }
                     }
 
@@ -153,16 +165,18 @@ impl Daemon {
                         ax => ax,
                     };
 
-                    let report = XUSBReport {
-                        w_buttons,
-                        b_left_trigger: pad.trigger_left,
-                        b_right_trigger: pad.trigger_right,
-                        s_thumb_lx: deadstick(pad.stick_x, center.0.0),
-                        s_thumb_ly: deadstick(pad.stick_y, center.0.1),
-                        s_thumb_rx: deadstick(pad.cstick_x, center.1.0),
-                        s_thumb_ry: deadstick(pad.cstick_y, center.1.1),
+                    let report = UsbReport {
+                        buttons: buttons.bits(),
+                        left_trigger: pad.trigger_left,
+                        right_trigger: pad.trigger_right,
+                        left_x: deadstick(pad.stick_x, center.0.0),
+                        left_y: deadstick(pad.stick_y, center.0.1),
+                        right_x: deadstick(pad.cstick_x, center.1.0),
+                        right_y: deadstick(pad.cstick_y, center.1.1),
                     };
-                    target.update(&report).unwrap();
+                    if let Err(e) = target.update(&report) {
+                        self.logger.log(&format!("Failed to update target: {}", e));
+                    }
                 }
             }
         }

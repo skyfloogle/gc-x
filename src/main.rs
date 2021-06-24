@@ -6,7 +6,6 @@ use std::sync::Arc;
 mod adapter;
 mod config;
 mod daemon;
-mod notification;
 mod ui;
 
 fn main() {

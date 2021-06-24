@@ -5,12 +5,13 @@ edition = "2018"
 license = "GPL-3.0-or-later"
 
 [dependencies]
+bitflags = "1.2"
 itertools = "0.10"
 native-windows-derive = "1.0"
 native-windows-gui = "1.0"
 parking_lot = "0.11"
 rusb = "0.8"
-vigem = { git = "https://github.com/skyfloogle/vigem.git", branch = "fix-error-codes" }
+vigem = { path = "vigem" }
 winapi = { version = "0.3", features = ["playsoundapi", "winuser"] }
 
 [build-dependencies]

@@ -1,7 +1,7 @@
 // This is based on Dolphin's code for handling the GC adapter.
 // https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/InputCommon/GCAdapter.cpp
 
-use crate::ui;
+use crate::{config::GButton, ui};
 use parking_lot::{Condvar, Mutex, Once};
 use rusb::{constants::LIBUSB_DT_HID, Context, Device, DeviceHandle, Hotplug, UsbContext};
 use std::{convert::TryInto, sync::Arc, time::Duration};
@@ -11,7 +11,7 @@ const ADAPTER_PRODUCT_ID: u16 = 0x0337;
 
 #[derive(Clone, Copy)]
 pub struct GCPad {
-    pub buttons: u16,
+    pub buttons: GButton,
     pub stick_x: u8,
     pub stick_y: u8,
     pub cstick_x: u8,
@@ -244,7 +244,7 @@ impl GCAdapter {
         for (i, chunk) in payload[1..].chunks_exact(9).enumerate() {
             if chunk[0] >> 4 != 0 {
                 output[i] = Some(GCPad {
-                    buttons: u16::from_le_bytes(chunk[1..3].try_into().unwrap()),
+                    buttons: GButton::from_bits_truncate(u16::from_le_bytes(chunk[1..3].try_into().unwrap())),
                     stick_x: chunk[3],
                     stick_y: chunk[4],
                     cstick_x: chunk[5],
