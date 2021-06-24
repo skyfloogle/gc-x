@@ -2,7 +2,7 @@
 name = "gc-adapter"
 version = "0.1.0"
 edition = "2018"
-license = "GPL-3.0-or-later"
+license = "GPL-2.0-or-later"
 
 [dependencies]
 bitflags = "1.2"
