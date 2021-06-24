@@ -141,6 +141,7 @@ impl Daemon {
                             (transform(pad.stick_x), transform(pad.stick_y)),
                             (transform(pad.cstick_x), transform(pad.cstick_y)),
                         );
+                        *must_center = false;
                     }
 
                     let deadstick = |ax, center: i16| match transform(ax) - center {
