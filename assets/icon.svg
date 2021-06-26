@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Modified from https://commons.wikimedia.org/wiki/File:GCController_Layout.svg by Alphatron under CC BY-SA 3.0 -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" [
+	<!ENTITY ns_svg "http://www.w3.org/2000/svg">
+	<!ENTITY ns_xlink "http://www.w3.org/1999/xlink">
+]>
+<svg  version="1.1" xmlns="&ns_svg;" xmlns:xlink="&ns_xlink;" width="256" height="256" viewBox="3820 516 1176 1176"
+	 overflow="visible" xml:space="preserve">
+<g id="Face_Buttons_1_">
+	<g id="A_Inner">
+		<g>
+			<circle fill="#87d639" cx="4408" cy="1104" r="224"/>
+		</g>
+	</g>
+	<g id="B_Inner">
+		<g>
+			<circle fill="#4296f3" cx="3968" cy="1336" r="130"/>
+		</g>
+	</g>
+	<g id="Y_Inner">
+		<g>
+			<path fill="#eeb136" d="M4487.297,672.681c-8.889-112.396-236.646-62.308-273.91-45.485
+				c-37.264,16.823-207.073,96.898-134.669,194.161c83.202,86.025,136.636-11.178,211.14-46.641
+				C4386.82,737.157,4490.734,790.5,4487.297,672.681z"/>
+		</g>
+	</g>
+	<g id="X_Inner">
+		<g>
+			<path fill="#e02828" d="M4897.257,913.106c-16.822-37.264-96.897-207.073-194.161-134.67
+				c-86.025,83.202,11.178,136.636,46.641,211.141c37.56,96.962-15.783,200.876,102.035,197.438
+				C4964.168,1178.127,4914.08,950.37,4897.257,913.106z"/>
+		</g>
+	</g>
+</g>
+</svg>
