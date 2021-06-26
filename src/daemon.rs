@@ -71,7 +71,8 @@ impl Daemon {
             if self.exit_once.state().done() {
                 break
             }
-            for (pad_opt, target_opt, notif, center, must_center, connected) in itertools::izip!(
+            for (i, pad_opt, target_opt, notif, center, must_center, connected) in itertools::izip!(
+                0..,
                 &pads,
                 targets.lock().iter_mut(),
                 &mut notif_handles,
@@ -81,7 +82,7 @@ impl Daemon {
             ) {
                 match (pad_opt, target_opt.as_mut()) {
                     (Some(_), None) => {
-                        self.logger.log("New GC controller connected!");
+                        self.logger.log(&format!("New GC controller connected in port {}!", i + 1));
                         *center = ((0, 0), (0, 0));
                         *must_center = self.config.lock().auto_recenter;
                         *connected = true;
@@ -118,7 +119,7 @@ impl Daemon {
                         *target_opt = Some(target);
                     },
                     (None, Some(target)) => {
-                        self.logger.log("GC controller disconnected.");
+                        self.logger.log(&format!("GC controller in port {} disconnected.", i + 1));
                         if let Err(e) = self.vigem.remove_target(target) {
                             self.logger.log(&format!("Failed to remove target: {}", e));
                         }
@@ -154,6 +155,7 @@ impl Daemon {
                             (transform(pad.cstick_x), transform(pad.cstick_y)),
                         );
                         *must_center = false;
+                        self.logger.log(&format!("Joysticks centered for P{}", i + 1));
                     }
 
                     let deadstick = |ax, center: i16| match transform(ax) - center {

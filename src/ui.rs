@@ -299,6 +299,7 @@ impl App {
         });
         self.port.revert_button.set_enabled(false);
         self.port.save_button.set_enabled(false);
+        self.make_logger().log("Settings reverted.");
     }
 
     fn save_config(&self) {
@@ -320,6 +321,14 @@ impl App {
         config.close_to_tray = self.port.tray_check.check_state() == CheckBoxState::Checked;
         self.port.revert_button.set_enabled(false);
         self.port.save_button.set_enabled(false);
+        self.make_logger().log("Settings applied.");
+    }
+
+    fn make_logger(&self) -> Logger {
+        Logger {
+            buf: self.log_buf.clone(),
+            sender: self.log_notice.sender(),
+        }
     }
 
     fn update_log(&self) {
@@ -440,7 +449,7 @@ pub fn init_app(
         joy_connected,
     };
     let app = App::build_ui(app)?;
-    let logger = Logger { buf: app.log_buf.clone(), sender: app.log_notice.sender() };
+    let logger = app.make_logger();
     let join_sender = app.join_notice.sender();
     let leave_sender = app.leave_notice.sender();
     Ok(UiInfo { app, logger, join_sender, leave_sender })
