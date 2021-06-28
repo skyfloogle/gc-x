@@ -325,10 +325,7 @@ impl App {
     }
 
     fn make_logger(&self) -> Logger {
-        Logger {
-            buf: self.log_buf.clone(),
-            sender: self.log_notice.sender(),
-        }
+        Logger { buf: self.log_buf.clone(), sender: self.log_notice.sender() }
     }
 
     fn update_log(&self) {
