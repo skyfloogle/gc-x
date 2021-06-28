@@ -161,6 +161,31 @@ impl UsbReport {
     }
 }
 
+// for a function ptr using the CALLBACK calling convention,
+// which is stdcall on windows and C elsewhere
+macro_rules! callback {
+    (fn $f:ident $args:tt $body:tt) => {
+        #[cfg(target_arch = "x86")]
+        unsafe extern "stdcall" fn $f $args $body
+        #[cfg(not(target_arch = "x86"))]
+        unsafe extern "C" fn $f $args $body
+    };
+}
+
+callback! {
+    fn handle_notification(
+        _client: bindings::PVIGEM_CLIENT,
+        target: bindings::PVIGEM_TARGET,
+        large_motor: bindings::UCHAR,
+        small_motor: bindings::UCHAR,
+        _led_number: bindings::UCHAR,
+        user_data: bindings::LPVOID,
+    ) {
+        let handle = &mut *user_data.cast::<NotificationHandle>();
+        (handle.func)(&Target::new_ref(target), large_motor, small_motor);
+    }
+}
+
 impl Target {
     pub fn new() -> Self {
         unsafe { Self { target: bindings::vigem_target_x360_alloc(), is_ref: false, client: None } }
@@ -179,17 +204,6 @@ impl Target {
         &mut self,
         func: F,
     ) -> Result<Pin<Box<NotificationHandle<'a>>>> {
-        unsafe extern "C" fn handle_notification(
-            _client: bindings::PVIGEM_CLIENT,
-            target: bindings::PVIGEM_TARGET,
-            large_motor: bindings::UCHAR,
-            small_motor: bindings::UCHAR,
-            _led_number: bindings::UCHAR,
-            user_data: bindings::LPVOID,
-        ) {
-            let handle = &mut *user_data.cast::<NotificationHandle>();
-            (handle.func)(&Target::new_ref(target), large_motor, small_motor);
-        }
         let client = self.client.ok_or(Error::TargetUninitialized)?;
         unsafe {
             let func: Box<dyn FnMut(&Target, u8, u8)> = Box::new(func);
