@@ -299,7 +299,7 @@ impl App {
         });
         self.port.revert_button.set_enabled(false);
         self.port.save_button.set_enabled(false);
-        self.make_logger().log("Settings reverted.");
+        self.log("Settings reverted.");
     }
 
     fn save_config(&self) {
@@ -321,14 +321,10 @@ impl App {
         config.close_to_tray = self.port.tray_check.check_state() == CheckBoxState::Checked;
         self.port.revert_button.set_enabled(false);
         self.port.save_button.set_enabled(false);
-        self.make_logger().log("Settings applied.");
+        self.log("Settings applied.");
     }
 
-    fn make_logger(&self) -> Logger {
-        Logger { buf: self.log_buf.clone(), sender: self.log_notice.sender() }
-    }
-
-    fn update_log(&self) {
+    fn log(&self, text: &str) {
         use std::os::windows::ffi::OsStrExt;
         use winapi::um::winuser::EM_REPLACESEL;
 
@@ -336,9 +332,8 @@ impl App {
 
         // move cursor to end (log.len() won't include the newlines so it's bad)
         let end = self.log.text().len() as u32;
+
         self.log.set_selection(end..end);
-        // get text
-        let mut text = self.log_buf.lock();
         // convert to utf-16
         let osstr: &std::ffi::OsStr = text.as_ref();
         let utf: Vec<_> = osstr.encode_wide().chain(Some(0u16).into_iter()).collect();
@@ -351,10 +346,14 @@ impl App {
                 utf.as_ptr() as _,
             );
         }
-        // clear buffer
-        text.clear();
         // move selection back to where it was before
         self.log.set_selection(sel);
+    }
+
+    fn update_log(&self) {
+        let mut text = self.log_buf.lock();
+        self.log(&mut text);
+        text.clear();
     }
 
     fn recenter(&self, id: usize) {
@@ -446,7 +445,7 @@ pub fn init_app(
         joy_connected,
     };
     let app = App::build_ui(app)?;
-    let logger = app.make_logger();
+    let logger = Logger { buf: app.log_buf.clone(), sender: app.log_notice.sender() };
     let join_sender = app.join_notice.sender();
     let leave_sender = app.leave_notice.sender();
     Ok(UiInfo { app, logger, join_sender, leave_sender })
