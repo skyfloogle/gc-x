@@ -8,6 +8,16 @@ mod config;
 mod daemon;
 mod ui;
 
+#[macro_export]
+macro_rules! log {
+    ($logger:expr, $fmt:literal) => {{
+        $logger.log($fmt)
+    }};
+    ($logger:expr, $fmt:literal, $($arg:expr),+) => {{
+        $logger.log(&format!($fmt, $($arg),+))
+    }}
+}
+
 fn main() {
     let exit_once = Arc::new(Once::new());
 

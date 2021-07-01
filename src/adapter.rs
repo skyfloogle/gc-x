@@ -1,7 +1,7 @@
 // This is based on Dolphin's code for handling the GC adapter.
 // https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/InputCommon/GCAdapter.cpp
 
-use crate::{config::GButton, ui};
+use crate::{config::GButton, log, ui};
 use parking_lot::{Condvar, Mutex, Once};
 use rusb::{constants::LIBUSB_DT_HID, Context, Device, DeviceHandle, Hotplug, UsbContext};
 use std::{convert::TryInto, sync::Arc, time::Duration};
@@ -55,16 +55,16 @@ impl GCAdapterWaiter {
                 Box::new(HotplugCallback { adapter: adapter.clone() }),
             ) {
                 Ok(reg) => {
-                    logger.log("Using libusb hotplug detection.");
+                    log!(logger, "Using libusb hotplug detection.");
                     Some(reg)
                 },
                 Err(e) => {
-                    logger.log(&format!("Couldn't initialize libusb hotplug detection: {}", e));
+                    log!(logger, "Couldn't initialize libusb hotplug detection: {}", e);
                     None
                 },
             }
         } else {
-            logger.log("libusb hotplug detection not supported.");
+            log!(logger, "libusb hotplug detection not supported.");
             None
         };
         Ok(Self { context, adapter, hotplug_reg, newly_none: Arc::new(Mutex::new(false)), exit_once, logger })
@@ -77,22 +77,23 @@ impl GCAdapterWaiter {
                 Err(_) => return None,
             };
             if descriptor.vendor_id() == ADAPTER_VENDOR_ID && descriptor.product_id() == ADAPTER_PRODUCT_ID {
-                self.logger.log("Found GC adapter, opening...");
+                log!(self.logger, "Found GC adapter, opening...");
                 let mut handle = match device.open() {
                     Ok(handle) => handle,
                     Err(rusb::Error::Access) => {
-                        self.logger.log(&format!(
+                        log!(
+                            self.logger,
                             "ERROR: I don't have access to that device: Bus {:03} Device {:03}: ID {:04X}:{:04X}.\
                             Do you have Dolphin or another copy of this program running?",
                             device.bus_number(),
                             device.port_number(),
                             descriptor.vendor_id(),
                             descriptor.product_id()
-                        ));
+                        );
                         return None
                     },
                     Err(e) => {
-                        self.logger.log(&format!("ERROR: couldn't open: {}", e));
+                        log!(self.logger, "ERROR: couldn't open: {}", e);
                         return None
                     },
                 };
@@ -100,14 +101,14 @@ impl GCAdapterWaiter {
                 match handle.kernel_driver_active(0) {
                     Ok(true) => {
                         if let Err(e) = handle.detach_kernel_driver(0) {
-                            self.logger.log(&format!("ERROR: couldn't detach kernel driver: {}", e));
+                            log!(self.logger, "ERROR: couldn't detach kernel driver: {}", e);
                             return None
                         }
                     },
                     Ok(false) => (),
                     Err(rusb::Error::NotSupported) => (),
                     Err(e) => {
-                        self.logger.log(&format!("Error: couldn't check if kernel driver was active: {}", e));
+                        log!(self.logger, "Error: couldn't check if kernel driver was active: {}", e);
                         return None
                     },
                 }
@@ -116,7 +117,7 @@ impl GCAdapterWaiter {
                 match handle.write_control(0x21, 11, 0x0001, 0, &[], Duration::from_secs(1)) {
                     Ok(_) | Err(rusb::Error::Pipe) => (), // mayflash
                     Err(e) => {
-                        self.logger.log(&format!("ERROR: Unexpected error in Nyko compat: {}", e));
+                        log!(self.logger, "ERROR: Unexpected error in Nyko compat: {}", e);
                         return None
                     },
                 }
@@ -124,7 +125,7 @@ impl GCAdapterWaiter {
                 match handle.claim_interface(0) {
                     Ok(()) => Some((device, handle)),
                     Err(e) => {
-                        self.logger.log(&format!("ERROR: couldn't claim interface: {}", e));
+                        log!(self.logger, "ERROR: couldn't claim interface: {}", e);
                         None
                     },
                 }
@@ -157,7 +158,7 @@ impl GCAdapterWaiter {
         let (lock, cvar) = &*self.adapter;
         let mut adapter_guard = lock.lock();
         if adapter_guard.is_none() {
-            self.logger.log("Waiting for GC adapter...");
+            log!(self.logger, "Waiting for GC adapter...");
             *self.newly_none.lock() = true;
             *adapter_guard = Some(loop {
                 if self.exit_once.state().done() {
@@ -172,7 +173,7 @@ impl GCAdapterWaiter {
                     std::thread::sleep(Duration::from_millis(500))
                 }
             });
-            self.logger.log("GC adapter connected!");
+            log!(self.logger, "GC adapter connected!");
         }
     }
 
@@ -186,7 +187,7 @@ impl GCAdapterWaiter {
             drop(adapter_lock);
             let mut newly_none = self.newly_none.lock();
             if *newly_none {
-                self.logger.log("GC adapter disconnected.");
+                log!(self.logger, "GC adapter disconnected.");
                 *newly_none = false;
                 return Default::default()
             } else {
@@ -208,7 +209,7 @@ impl GCAdapterWaiter {
         // nonblocking
         if let Some(adapter) = self.adapter.0.lock().as_ref() {
             if let Err(e) = adapter.send_rumble(rumble) {
-                self.logger.log(&format!("ERROR: sending rumble failed: {}", e));
+                log!(self.logger, "ERROR: sending rumble failed: {}", e);
             }
         }
     }
@@ -227,15 +228,15 @@ impl GCAdapter {
             Ok(37) if payload[0] == LIBUSB_DT_HID => (),
             Ok(_) => return Some(Default::default()), // might happen a few times on init
             Err(rusb::Error::NoDevice) => {
-                logger.log("GC adapter disconnected.");
+                log!(logger, "GC adapter disconnected.");
                 return None
             },
             Err(rusb::Error::Pipe) => {
-                logger.log("Endpoint halted, will attempt to reconnect.");
+                log!(logger, "Endpoint halted, will attempt to reconnect.");
                 return None
             },
             Err(e) => {
-                logger.log(&format!("Failed to read from adapter: {}", e));
+                log!(logger, "Failed to read from adapter: {}", e);
                 return Some(Default::default())
             },
         }

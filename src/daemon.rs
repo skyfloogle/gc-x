@@ -1,7 +1,7 @@
 use crate::{
     adapter::GCAdapterWaiter,
     config::{self, Config, GButton, XButton},
-    ui,
+    log, ui,
 };
 use native_windows_gui as nwg;
 use parking_lot::{Mutex, Once};
@@ -82,14 +82,14 @@ impl Daemon {
             ) {
                 match (pad_opt, target_opt.as_mut()) {
                     (Some(_), None) => {
-                        self.logger.log(&format!("New GC controller connected in port {}!", i + 1));
+                        log!(self.logger, "New GC controller connected in port {}!", i + 1);
                         *center = ((0, 0), (0, 0));
                         *must_center = self.config.lock().auto_recenter;
                         *connected = true;
                         self.join_sender.notice();
                         let mut target = Target::new();
                         if let Err(e) = self.vigem.add_target(&mut target) {
-                            self.logger.log(&format!("Could not add target: {}", e));
+                            log!(self.logger, "Could not add target: {}", e);
                             continue 'outer
                         }
 
@@ -112,16 +112,16 @@ impl Daemon {
                         ) {
                             Ok(handle) => Some(handle),
                             Err(e) => {
-                                self.logger.log(&format!("Could not register rumble notification: {}", e));
+                                log!(self.logger, "Could not register rumble notification: {}", e);
                                 None
                             },
                         };
                         *target_opt = Some(target);
                     },
                     (None, Some(target)) => {
-                        self.logger.log(&format!("GC controller in port {} disconnected.", i + 1));
+                        log!(self.logger, "GC controller in port {} disconnected.", i + 1);
                         if let Err(e) = self.vigem.remove_target(target) {
-                            self.logger.log(&format!("Failed to remove target: {}", e));
+                            log!(self.logger, "Failed to remove target: {}", e);
                         }
                         *target_opt = None;
                         *notif = None;
@@ -155,7 +155,7 @@ impl Daemon {
                             (transform(pad.cstick_x), transform(pad.cstick_y)),
                         );
                         *must_center = false;
-                        self.logger.log(&format!("Joysticks centered for P{}", i + 1));
+                        log!(self.logger, "Joysticks centered for P{}", i + 1);
                     }
 
                     let deadstick = |ax, center: i16| match transform(ax) - center {
@@ -177,7 +177,7 @@ impl Daemon {
                         right_y: deadstick(pad.cstick_y, center.1.1),
                     };
                     if let Err(e) = target.update(&report) {
-                        self.logger.log(&format!("Failed to update target: {}", e));
+                        log!(self.logger, "Failed to update target: {}", e);
                     }
                 }
             }
