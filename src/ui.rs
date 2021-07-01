@@ -326,29 +326,54 @@ impl App {
 
     /// Send a log message. Message should end in CRLF.
     fn log(&self, text: &str) {
-        use std::os::windows::ffi::OsStrExt;
-        use winapi::um::winuser::EM_REPLACESEL;
+        fn replace_msg(textbox: &nwg::TextBox, text: &str) {
+            use std::os::windows::ffi::OsStrExt;
+            use winapi::um::winuser::EM_REPLACESEL;
+            // convert to utf-16
+            let osstr: &std::ffi::OsStr = text.as_ref();
+            let utf: Vec<_> = osstr.encode_wide().chain(Some(0u16).into_iter()).collect();
+            // paste new text at the end
+            unsafe {
+                winapi::um::winuser::SendMessageW(
+                    textbox.handle.hwnd().unwrap(),
+                    EM_REPLACESEL as u32,
+                    false.into(),
+                    utf.as_ptr() as _,
+                );
+            }
+        }
 
         let sel = self.log.selection();
 
-        // move cursor to end (log.len() won't include the newlines so it's bad)
-        let end = self.log.text().len() as u32;
+        let old_text = self.log.text();
+        // 30k is apparently the maximum
+        const MAX_LOG_LEN: usize = 30000;
+        // if this would go past the maximum length, snip the start
+        // will probably malfunction if message len is >30k but i won't be doing that
+        let snipped_len = if old_text.len() + text.len() >= MAX_LOG_LEN {
+            let unsnipped_len = old_text
+                .lines()
+                .rev()
+                .scan(text.len(), |acc, line| {
+                    *acc += line.len() + 2; // each line doesn't include CRLF
+                    (*acc < MAX_LOG_LEN).then(|| *acc)
+                })
+                .last()
+                .unwrap_or(0);
+            let snipped_len = ((old_text.len() + text.len()) - unsnipped_len) as u32;
+            self.log.set_selection(0..snipped_len);
+            replace_msg(&self.log, "");
+            snipped_len
+        } else {
+            0
+        };
+        let end = old_text.len() as u32 - snipped_len;
 
+        // move cursor to end
         self.log.set_selection(end..end);
-        // convert to utf-16
-        let osstr: &std::ffi::OsStr = text.as_ref();
-        let utf: Vec<_> = osstr.encode_wide().chain(Some(0u16).into_iter()).collect();
-        // paste new text at the end
-        unsafe {
-            winapi::um::winuser::SendMessageW(
-                self.log.handle.hwnd().unwrap(),
-                EM_REPLACESEL as u32,
-                false.into(),
-                utf.as_ptr() as _,
-            );
-        }
+        replace_msg(&self.log, text);
         // move selection back to where it was before
-        self.log.set_selection(sel);
+        self.log.set_selection(sel.start.saturating_sub(snipped_len)..sel.end.saturating_sub(snipped_len));
     }
 
     fn update_log(&self) {
