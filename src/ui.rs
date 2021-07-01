@@ -299,7 +299,7 @@ impl App {
         });
         self.port.revert_button.set_enabled(false);
         self.port.save_button.set_enabled(false);
-        self.log("Settings reverted.");
+        self.log("Settings reverted.\r\n");
     }
 
     fn save_config(&self) {
@@ -321,9 +321,10 @@ impl App {
         config.close_to_tray = self.port.tray_check.check_state() == CheckBoxState::Checked;
         self.port.revert_button.set_enabled(false);
         self.port.save_button.set_enabled(false);
-        self.log("Settings applied.");
+        self.log("Settings applied.\r\n");
     }
 
+    /// Send a log message. Message should end in CRLF.
     fn log(&self, text: &str) {
         use std::os::windows::ffi::OsStrExt;
         use winapi::um::winuser::EM_REPLACESEL;
