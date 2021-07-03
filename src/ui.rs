@@ -248,16 +248,35 @@ impl App {
     fn modify(&self) {
         self.port.revert_button.set_enabled(true);
         self.port.save_button.set_enabled(true);
+        // if it's already locked then it's being modified elsewhere
+        if let Some(mut config) = self.config.try_lock() {
+            for (but, cb) in config.buttons.iter_mut().zip([
+                &self.port.a_map,
+                &self.port.b_map,
+                &self.port.x_map,
+                &self.port.y_map,
+                &self.port.z_map,
+                &self.port.st_map,
+            ]) {
+                if let Some(sel) = cb.selection() {
+                    *but = sel;
+                }
+            }
+            config.deadzone = *self.deadzone.lock();
+            config.auto_recenter = self.port.recenter_check.check_state() == CheckBoxState::Checked;
+            config.close_to_tray = self.port.tray_check.check_state() == CheckBoxState::Checked;
+        }
     }
 
     fn set_deadzone(&self, new_deadzone: u8, set_textbox: bool) {
         if let Some(mut deadzone) = self.deadzone.try_lock() {
-            self.modify();
             *deadzone = new_deadzone;
             self.port.deadzone_slider.set_pos(new_deadzone as _);
             if set_textbox {
                 self.port.deadzone_text.set_text(&new_deadzone.to_string());
             }
+            drop(deadzone); // avoid deadlocks
+            self.modify();
         }
     }
 
@@ -279,7 +298,9 @@ impl App {
     }
 
     fn revert_config(&self) {
-        let config = self.config.lock();
+        let new_config = Config::load(&|text| self.log(text));
+        let mut config = self.config.lock();
+        *config = new_config;
         self.set_deadzone(config.deadzone, true);
         for (but, cb) in config.buttons.iter().zip([
             &self.port.a_map,
@@ -303,29 +324,13 @@ impl App {
         });
         self.port.revert_button.set_enabled(false);
         self.port.save_button.set_enabled(false);
-        self.log("Settings reverted.\r\n");
     }
 
     fn save_config(&self) {
-        let mut config = self.config.lock();
-        for (but, cb) in config.buttons.iter_mut().zip([
-            &self.port.a_map,
-            &self.port.b_map,
-            &self.port.x_map,
-            &self.port.y_map,
-            &self.port.z_map,
-            &self.port.st_map,
-        ]) {
-            if let Some(sel) = cb.selection() {
-                *but = sel;
-            }
+        if self.config.lock().save(&|text| self.log(text)) {
+            self.port.revert_button.set_enabled(false);
+            self.port.save_button.set_enabled(false);
         }
-        config.deadzone = *self.deadzone.lock();
-        config.auto_recenter = self.port.recenter_check.check_state() == CheckBoxState::Checked;
-        config.close_to_tray = self.port.tray_check.check_state() == CheckBoxState::Checked;
-        self.port.revert_button.set_enabled(false);
-        self.port.save_button.set_enabled(false);
-        self.log("Settings applied.\r\n");
     }
 
     /// Send a log message. Message should end in CRLF.
