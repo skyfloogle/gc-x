@@ -330,6 +330,7 @@ impl App {
 
     /// Send a log message. Message should end in CRLF.
     fn log(&self, text: &str) {
+        print!("{}", text);
         fn replace_msg(textbox: &nwg::TextBox, text: &str) {
             use std::os::windows::ffi::OsStrExt;
             use winapi::um::winuser::EM_REPLACESEL;
@@ -499,10 +500,8 @@ pub struct Logger {
 
 impl Logger {
     pub fn log(&self, text: &str) {
-        println!("{}", text);
         let mut buf = self.buf.lock();
         buf.push_str(text);
-        buf.push_str("\r\n");
         self.sender.notice();
     }
 }

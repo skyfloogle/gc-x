@@ -11,10 +11,10 @@ mod ui;
 #[macro_export]
 macro_rules! log {
     ($logger:expr, $fmt:literal) => {{
-        $logger.log($fmt)
+        $logger.log(concat!($fmt, "\r\n"))
     }};
     ($logger:expr, $fmt:literal, $($arg:expr),+) => {{
-        $logger.log(&format!($fmt, $($arg),+))
+        $logger.log(&format!(concat!($fmt, "\r\n"), $($arg),+))
     }}
 }
 
