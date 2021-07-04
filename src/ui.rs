@@ -162,7 +162,7 @@ pub struct App {
     #[nwg_layout_item(
         layout: main_layout,
         size: Size { width: Dimension::Points(250.0), height: Dimension::Auto },
-        min_size: Size { width: Dimension::Points(160.0), height: Dimension::Points(400.0) }
+        min_size: Size { width: Dimension::Points(165.0), height: Dimension::Points(400.0) }
     )]
     port_frame: nwg::Frame,
 
