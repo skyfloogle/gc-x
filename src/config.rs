@@ -1,4 +1,4 @@
-const CONFIG_PATH: &str = "gc-adapter.ini";
+const CONFIG_PATH: &str = "gc-x.ini";
 mod section {
     pub const BUTTONS: &str = "Buttons";
     pub const CONTROLLER: &str = "Controller";

@@ -129,7 +129,7 @@ pub struct App {
     #[nwg_resource(source_embed: Some(&data.embed_resource), source_embed_str: Some("icon"))]
     icon: nwg::Icon,
 
-    #[nwg_control(title: "gc-adapter", icon: Some(&data.icon))]
+    #[nwg_control(title: "GC-X", icon: Some(&data.icon))]
     #[nwg_events(OnInit: [App::show_welcome], OnWindowClose: [App::close_window])]
     window: nwg::Window,
 
@@ -189,7 +189,7 @@ pub struct App {
     #[nwg_control(popup: true)]
     tray_popup: nwg::Menu,
 
-    #[nwg_control(parent: tray_popup, text: "gc-adapter", disabled: true)]
+    #[nwg_control(parent: tray_popup, text: "GC-X", disabled: true)]
     popup_title: nwg::MenuItem,
 
     #[nwg_control(parent: tray_popup)]
@@ -199,7 +199,7 @@ pub struct App {
     #[nwg_events(OnMenuItemSelected: [App::exit])]
     exit_item: nwg::MenuItem,
 
-    #[nwg_control(tip: Some("gc-adapter"), icon: Some(&data.icon))]
+    #[nwg_control(tip: Some("GC-X"), icon: Some(&data.icon))]
     #[nwg_events(OnContextMenu: [App::right_click], MousePressLeftUp: [App::revive_window])]
     pub tray: nwg::TrayNotification,
 
@@ -233,7 +233,7 @@ impl App {
 
     fn close_window(&self) {
         if self.config.lock().close_to_tray {
-            self.tray.show("gc-adapter runs via the taskbar.", None, None, None);
+            self.tray.show("GC-X runs via the taskbar.", None, None, None);
         } else {
             self.exit();
         }
