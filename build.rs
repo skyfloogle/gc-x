@@ -13,7 +13,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // icon
     let mut res = winres::WindowsResource::new();
-    res.set_icon_with_id("assets/icon.ico", "icon").set("ProductName", "GC-X");
+    res.set_icon_with_id("assets/icon.ico", "icon")
+        .set("FileDescription", "GC-X")
+        .set("ProductName", "GC-X")
+        .set("CompanyName", "Floogle");
     res.compile()?;
 
     Ok(())
