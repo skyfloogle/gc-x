@@ -20,4 +20,5 @@ vigem = { path = "vigem" }
 winapi = { version = "0.3", features = ["playsoundapi", "winuser"] }
 
 [build-dependencies]
+time = "0.3"
 winres = "0.1.11"

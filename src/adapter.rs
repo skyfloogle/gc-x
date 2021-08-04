@@ -64,7 +64,6 @@ impl GCAdapterWaiter {
                 },
             }
         } else {
-            log!(logger, "libusb hotplug detection not supported.");
             None
         };
         Ok(Self { context, adapter, hotplug_reg, newly_none: Arc::new(Mutex::new(false)), exit_once, logger })

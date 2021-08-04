@@ -164,6 +164,7 @@ dependencies = [
  "parking_lot",
  "rusb",
  "rust-ini",
+ "time",
  "vigem",
  "winapi",
  "winres",
@@ -610,6 +611,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d326610f408c7a4eb6f51c37c330e496b08506c9457c9d34287ecc38809fb060"
 dependencies = [
  "unicode-width",
+]
+
+[[package]]
+name = "time"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6cf2535c6456e772ad756a0854ec907ede55d73d0b5a34855d808cb2d2f0942e"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

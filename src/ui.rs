@@ -189,7 +189,8 @@ pub struct App {
     #[nwg_control(popup: true)]
     tray_popup: nwg::Menu,
 
-    #[nwg_control(parent: tray_popup, text: "GC-X", disabled: true)]
+    #[nwg_control(parent: tray_popup, text: "GC-X")]
+    #[nwg_events(OnMenuItemSelected: [App::revive_window])]
     popup_title: nwg::MenuItem,
 
     #[nwg_control(parent: tray_popup)]
@@ -228,12 +229,16 @@ impl App {
 
     fn revive_window(&self) {
         self.window.restore();
-        self.revert_config();
     }
 
     fn close_window(&self) {
         if self.config.lock().close_to_tray {
-            self.tray.show("GC-X runs via the taskbar.", None, None, None);
+            self.tray.show(
+                "You can bring back the UI by clicking the icon.",
+                Some("GC-X collapsed to tray"),
+                None,
+                None,
+            );
         } else {
             self.exit();
         }
@@ -413,7 +418,6 @@ impl App {
     }
 
     fn controller_join(&self) {
-        self.tray.show("New controller connected", None, None, None);
         let joy_connected = self.joy_connected.lock();
         self.port.recenter_p1.set_enabled(joy_connected[0]);
         self.port.recenter_p2.set_enabled(joy_connected[1]);
@@ -422,7 +426,6 @@ impl App {
     }
 
     fn controller_leave(&self) {
-        self.tray.show("Controller disconnected", None, None, None);
         let joy_connected = self.joy_connected.lock();
         self.port.recenter_p1.set_enabled(joy_connected[0]);
         self.port.recenter_p2.set_enabled(joy_connected[1]);

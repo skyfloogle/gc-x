@@ -8,6 +8,9 @@ use parking_lot::{Mutex, Once};
 use std::sync::Arc;
 use vigem::{Target, UsbReport};
 
+const INFO_STRINGS: [&str; 2] =
+    [concat!("GC-X v", env!("CARGO_PKG_VERSION")), concat!("Built on ", env!("BUILD_DATE"), " #", env!("GIT_HASH"))];
+
 pub struct Daemon {
     exit_once: Arc<Once>,
     waiter: GCAdapterWaiter,
@@ -31,6 +34,7 @@ impl Daemon {
         leave_sender: nwg::NoticeSender,
     ) -> Result<Self, ()> {
         // all fallible initialization goes here
+        INFO_STRINGS.iter().for_each(|s| log!(logger, "{}", s));
         let waiter = match GCAdapterWaiter::new(exit_once.clone(), logger.clone()) {
             Ok(waiter) => waiter,
             Err(rusb::Error::NotSupported) => {
