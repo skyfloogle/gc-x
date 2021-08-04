@@ -196,6 +196,10 @@ pub struct App {
     #[nwg_control(parent: tray_popup)]
     sep: nwg::MenuSeparator,
 
+    #[nwg_control(parent: tray_popup, text: "GitHub")]
+    #[nwg_events(OnMenuItemSelected: [App::website])]
+    popup_website: nwg::MenuItem,
+
     #[nwg_control(parent: tray_popup, text: "Exit")]
     #[nwg_events(OnMenuItemSelected: [App::exit])]
     exit_item: nwg::MenuItem,
@@ -433,6 +437,13 @@ impl App {
         self.port.recenter_p4.set_enabled(joy_connected[3]);
     }
 
+    fn website(&self) {
+        const WEBSITE: &str = "https://github.com/skyfloogle/gc-x";
+        if let Err(e) = open::that(WEBSITE) {
+            self.log(&format!("Couldn't open website: {}\r\nCopy this link instead:\r\n{}\r\n", e, WEBSITE));
+        }
+    }
+
     fn exit(&self) {
         nwg::stop_thread_dispatch();
         self.exit_once.call_once(|| ());
@@ -473,6 +484,7 @@ pub fn init_app(
         tray_popup: Default::default(),
         popup_title: Default::default(),
         sep: Default::default(),
+        popup_website: Default::default(),
         exit_item: Default::default(),
         tray: Default::default(),
         join_notice: Default::default(),
