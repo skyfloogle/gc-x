@@ -11,7 +11,7 @@ mod bindings {
     #[link(name = "setupapi")]
     extern "C" {}
 
-    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+    include!("bindings.rs");
 }
 
 pub enum Error {
@@ -161,29 +161,16 @@ impl UsbReport {
     }
 }
 
-// for a function ptr using the CALLBACK calling convention,
-// which is stdcall on windows and C elsewhere
-macro_rules! callback {
-    (fn $f:ident $args:tt $body:tt) => {
-        #[cfg(target_arch = "x86")]
-        unsafe extern "stdcall" fn $f $args $body
-        #[cfg(not(target_arch = "x86"))]
-        unsafe extern "C" fn $f $args $body
-    };
-}
-
-callback! {
-    fn handle_notification(
-        _client: bindings::PVIGEM_CLIENT,
-        target: bindings::PVIGEM_TARGET,
-        large_motor: bindings::UCHAR,
-        small_motor: bindings::UCHAR,
-        _led_number: bindings::UCHAR,
-        user_data: bindings::LPVOID,
-    ) {
-        let handle = &mut *user_data.cast::<NotificationHandle>();
-        (handle.func)(&Target::new_ref(target), large_motor, small_motor);
-    }
+unsafe extern "stdcall" fn handle_notification(
+    _client: bindings::PVIGEM_CLIENT,
+    target: bindings::PVIGEM_TARGET,
+    large_motor: bindings::UCHAR,
+    small_motor: bindings::UCHAR,
+    _led_number: bindings::UCHAR,
+    user_data: bindings::LPVOID,
+) {
+    let handle = &mut *user_data.cast::<NotificationHandle>();
+    (handle.func)(&Target::new_ref(target), large_motor, small_motor);
 }
 
 impl Target {
