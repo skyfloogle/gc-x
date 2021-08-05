@@ -101,6 +101,16 @@ impl GCAdapterWaiter {
                         );
                         return None
                     },
+                    Err(rusb::Error::NotSupported) => {
+                        ui::show_error(
+                            "Driver not found",
+                            "Opening the device was not supported.\n\
+                            This may mean you haven't installed the WinUSB driver correctly.\n\
+                            Please install the driver with Zadig and try again.",
+                        );
+                        self.exit_sender.notice();
+                        return None
+                    },
                     Err(e) => {
                         log!(self.logger, "ERROR: couldn't open: {}", e);
                         return None
