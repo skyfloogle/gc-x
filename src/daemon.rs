@@ -32,10 +32,11 @@ impl Daemon {
         joy_connected: Arc<Mutex<[bool; 4]>>,
         join_sender: nwg::NoticeSender,
         leave_sender: nwg::NoticeSender,
+        exit_sender: nwg::NoticeSender,
     ) -> Result<Self, ()> {
         // all fallible initialization goes here
         INFO_STRINGS.iter().for_each(|s| log!(logger, "{}", s));
-        let waiter = match GCAdapterWaiter::new(exit_once.clone(), logger.clone()) {
+        let waiter = match GCAdapterWaiter::new(exit_once.clone(), logger.clone(), exit_sender) {
             Ok(waiter) => waiter,
             Err(rusb::Error::NotSupported) => {
                 ui::show_error(

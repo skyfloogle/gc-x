@@ -45,6 +45,7 @@ fn main() {
             let exit_once = exit_once.clone();
             let join_sender = ui.join_sender;
             let leave_sender = ui.leave_sender;
+            let exit_sender = ui.exit_sender;
             move || {
                 let mut daemon = match daemon::Daemon::new(
                     exit_once.clone(),
@@ -54,6 +55,7 @@ fn main() {
                     joy_connected,
                     join_sender,
                     leave_sender,
+                    exit_sender,
                 ) {
                     Ok(daemon) => daemon,
                     Err(()) => {

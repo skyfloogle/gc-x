@@ -216,6 +216,10 @@ pub struct App {
     #[nwg_events(OnNotice: [App::controller_leave])]
     pub leave_notice: nwg::Notice,
 
+    #[nwg_control]
+    #[nwg_events(OnNotice: [App::exit])]
+    pub exit_notice: nwg::Notice,
+
     pub exit_once: Arc<Once>,
 
     config: Arc<Mutex<Config>>,
@@ -455,6 +459,7 @@ pub struct UiInfo {
     pub logger: Logger,
     pub join_sender: nwg::NoticeSender,
     pub leave_sender: nwg::NoticeSender,
+    pub exit_sender: nwg::NoticeSender,
 }
 
 pub fn run_ui() {
@@ -489,6 +494,7 @@ pub fn init_app(
         tray: Default::default(),
         join_notice: Default::default(),
         leave_notice: Default::default(),
+        exit_notice: Default::default(),
         exit_once,
         config,
         deadzone: Default::default(),
@@ -499,7 +505,8 @@ pub fn init_app(
     let logger = Logger { buf: app.log_buf.clone(), sender: app.log_notice.sender() };
     let join_sender = app.join_notice.sender();
     let leave_sender = app.leave_notice.sender();
-    Ok(UiInfo { app, logger, join_sender, leave_sender })
+    let exit_sender = app.exit_notice.sender();
+    Ok(UiInfo { app, logger, join_sender, leave_sender, exit_sender })
 }
 
 pub fn show_error(title: &str, content: &str) {

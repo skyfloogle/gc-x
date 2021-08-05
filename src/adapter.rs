@@ -2,6 +2,7 @@
 // https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/InputCommon/GCAdapter.cpp
 
 use crate::{config::GButton, log, ui};
+use native_windows_gui as nwg;
 use parking_lot::{Condvar, Mutex, Once};
 use rusb::{constants::LIBUSB_DT_HID, Context, Device, DeviceHandle, Hotplug, UsbContext};
 use std::{convert::TryInto, sync::Arc, time::Duration};
@@ -27,6 +28,7 @@ pub struct GCAdapterWaiter {
     newly_none: Arc<Mutex<bool>>,
     exit_once: Arc<Once>,
     logger: ui::Logger,
+    exit_sender: nwg::NoticeSender,
 }
 
 struct HotplugCallback {
@@ -44,7 +46,7 @@ impl Hotplug<rusb::Context> for HotplugCallback {
 }
 
 impl GCAdapterWaiter {
-    pub fn new(exit_once: Arc<Once>, logger: ui::Logger) -> rusb::Result<Self> {
+    pub fn new(exit_once: Arc<Once>, logger: ui::Logger, exit_sender: nwg::NoticeSender) -> rusb::Result<Self> {
         let context = rusb::Context::new()?;
         let adapter = Arc::new((Mutex::new(None), Condvar::new()));
         let hotplug_reg = if rusb::has_hotplug() {
@@ -66,7 +68,15 @@ impl GCAdapterWaiter {
         } else {
             None
         };
-        Ok(Self { context, adapter, hotplug_reg, newly_none: Arc::new(Mutex::new(false)), exit_once, logger })
+        Ok(Self {
+            context,
+            adapter,
+            hotplug_reg,
+            newly_none: Arc::new(Mutex::new(false)),
+            exit_once,
+            logger,
+            exit_sender,
+        })
     }
 
     pub fn try_connect_controller(&self) -> rusb::Result<Option<GCAdapter>> {
