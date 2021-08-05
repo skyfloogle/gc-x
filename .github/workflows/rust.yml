@@ -1,0 +1,43 @@
+name: Rust
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+    - uses: actions-rs/toolchain@v1
+      with:
+        target: x86_64-pc-windows-msvc
+        toolchain: stable
+        default: true
+    - name: Build 64-bit
+      run: cargo build --release --verbose
+    - name: Upload 64-bit
+      uses: actions/upload-artifact@v2
+      with:
+        name: gc-x_x64
+        path: target/release/gc-x.exe
+    - uses: actions-rs/toolchain@v1
+      with:
+        target: i686-pc-windows-msvc
+        toolchain: stable
+    - name: Build 32-bit
+      run: cargo build --release --verbose --target=i686-pc-windows-msvc
+    - name: Upload 32-bit
+      uses: actions/upload-artifact@v2
+      with:
+        name: gc-x_x86
+        path: target/i686-pc-windows-msvc/release/gc-x.exe
