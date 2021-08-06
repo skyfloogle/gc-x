@@ -83,7 +83,7 @@ pub const GBUTTONS: [(&str, GButton); 6] = [
     ("Start", GButton::START),
 ];
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Config {
     pub buttons: [usize; 6],
     pub auto_recenter: bool,

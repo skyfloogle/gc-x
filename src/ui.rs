@@ -225,6 +225,7 @@ pub struct App {
 
     pub exit_once: Arc<Once>,
 
+    saved_config: Mutex<Config>,
     config: Arc<Mutex<Config>>,
     deadzone: Mutex<u8>,
 
@@ -285,6 +286,10 @@ impl App {
             config.deadzone = *self.deadzone.lock();
             config.auto_recenter = self.port.recenter_check.check_state() == CheckBoxState::Checked;
             config.close_to_tray = self.port.tray_check.check_state() == CheckBoxState::Checked;
+            if *config == *self.saved_config.lock() {
+                self.port.revert_button.set_enabled(false);
+                self.port.save_button.set_enabled(false);
+            }
         }
     }
 
@@ -319,6 +324,7 @@ impl App {
 
     fn revert_config(&self) {
         let new_config = Config::load(&|text| self.log(text));
+        *self.saved_config.lock() = new_config.clone();
         let mut config = self.config.lock();
         *config = new_config;
         self.set_deadzone(config.deadzone, true);
@@ -347,7 +353,9 @@ impl App {
     }
 
     fn save_config(&self) {
-        if self.config.lock().save(&|text| self.log(text)) {
+        let config = self.config.lock();
+        if config.save(&|text| self.log(text)) {
+            *self.saved_config.lock() = config.clone();
             self.port.revert_button.set_enabled(false);
             self.port.save_button.set_enabled(false);
         }
@@ -480,6 +488,7 @@ pub fn init_app(
     joy_connected: Arc<Mutex<[bool; 4]>>,
 ) -> Result<UiInfo, nwg::NwgError> {
     nwg::init()?;
+    let saved_config = Mutex::new(config.lock().clone());
     let app = App {
         embed_resource: Default::default(),
         icon: Default::default(),
@@ -504,6 +513,7 @@ pub fn init_app(
         leave_notice: Default::default(),
         exit_notice: Default::default(),
         exit_once,
+        saved_config,
         config,
         deadzone: Default::default(),
         must_center,
