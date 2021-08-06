@@ -179,6 +179,7 @@ pub struct App {
         (x_map, OnComboxBoxSelection): [App::modify],
         (y_map, OnComboxBoxSelection): [App::modify],
         (z_map, OnComboxBoxSelection): [App::modify],
+        (st_map, OnComboxBoxSelection): [App::modify],
         (tray_check, OnButtonClick): [App::modify],
         (recenter_check, OnButtonClick): [App::modify],
         (revert_button, OnButtonClick): [App::revert_config],
