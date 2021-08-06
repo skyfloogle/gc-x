@@ -209,6 +209,8 @@ pub struct App {
     #[nwg_events(OnContextMenu: [App::right_click], MousePressLeftUp: [App::revive_window])]
     pub tray: nwg::TrayNotification,
 
+    has_collapsed: Mutex<bool>,
+
     #[nwg_control]
     #[nwg_events(OnNotice: [App::controller_join])]
     pub join_notice: nwg::Notice,
@@ -242,12 +244,16 @@ impl App {
 
     fn close_window(&self) {
         if self.config.lock().close_to_tray {
-            self.tray.show(
-                "You can bring back the UI by clicking the icon.",
-                Some("GC-X collapsed to tray"),
-                None,
-                None,
-            );
+            let mut has_collapsed = self.has_collapsed.lock();
+            if !*has_collapsed {
+                self.tray.show(
+                    "You can bring back the UI by clicking the icon.",
+                    Some("GC-X collapsed to tray"),
+                    None,
+                    None,
+                );
+                *has_collapsed = true;
+            }
         } else {
             self.exit();
         }
@@ -493,6 +499,7 @@ pub fn init_app(
         popup_website: Default::default(),
         exit_item: Default::default(),
         tray: Default::default(),
+        has_collapsed: Mutex::new(false),
         join_notice: Default::default(),
         leave_notice: Default::default(),
         exit_notice: Default::default(),
