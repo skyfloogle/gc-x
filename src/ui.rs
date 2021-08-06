@@ -28,7 +28,7 @@ pub struct Port {
     #[nwg_layout_item(layout: layout, col: 1, row: 0)]
     deadzone_text: nwg::TextInput,
 
-    #[nwg_control()]
+    #[nwg_control]
     #[nwg_layout_item(layout: layout, col: 0, row: 1, col_span: 2)]
     deadzone_slider: nwg::TrackBar,
 
@@ -112,7 +112,7 @@ pub struct Port {
     #[nwg_layout_item(layout: layout, col: 0, row: 12, col_span: 2)]
     tray_check: nwg::CheckBox,
 
-    #[nwg_control(text: "Revert changes", enabled: false)]
+    #[nwg_control(text: "Reload settings", enabled: false)]
     #[nwg_layout_item(layout: layout, col: 0, row: 13, col_span: 2)]
     revert_button: nwg::Button,
 
@@ -158,7 +158,7 @@ pub struct App {
 
     log_buf: Arc<Mutex<String>>,
 
-    #[nwg_control()]
+    #[nwg_control]
     #[nwg_layout_item(
         layout: main_layout,
         size: Size { width: Dimension::Points(250.0), height: Dimension::Auto },
@@ -186,6 +186,9 @@ pub struct App {
         (save_button, OnButtonClick): [App::save_config],
     )]
     port: Port,
+
+    #[nwg_resource]
+    tooltip: nwg::Tooltip,
 
     #[nwg_control(popup: true)]
     tray_popup: nwg::Menu,
@@ -502,6 +505,7 @@ pub fn init_app(
         log_buf: Arc::new(Default::default()),
         port_frame: Default::default(),
         port: Default::default(),
+        tooltip: Default::default(),
         tray_popup: Default::default(),
         popup_title: Default::default(),
         sep: Default::default(),
@@ -520,6 +524,22 @@ pub fn init_app(
         joy_connected,
     };
     let app = App::build_ui(app)?;
+    app.tooltip.register(&app.port.deadzone_text, "Joystick deadzone, in %");
+    app.tooltip.register(&app.port.deadzone_slider, "Joystick deadzone");
+    app.tooltip.register(&app.port.recenter_check, "Recenter joysticks automatically when controllers are connected");
+    app.tooltip.register(&app.port.a_map, "Xbox button to map to A on the GameCube controller");
+    app.tooltip.register(&app.port.b_map, "Xbox button to map to B on the GameCube controller");
+    app.tooltip.register(&app.port.x_map, "Xbox button to map to X on the GameCube controller");
+    app.tooltip.register(&app.port.y_map, "Xbox button to map to Y on the GameCube controller");
+    app.tooltip.register(&app.port.z_map, "Xbox button to map to Z on the GameCube controller");
+    app.tooltip.register(&app.port.st_map, "Xbox button to map to Start on the GameCube controller");
+    app.tooltip.register(&app.port.recenter_p1, "Recenter P1 joysticks");
+    app.tooltip.register(&app.port.recenter_p2, "Recenter P2 joysticks");
+    app.tooltip.register(&app.port.recenter_p3, "Recenter P3 joysticks");
+    app.tooltip.register(&app.port.recenter_p4, "Recenter P4 joysticks");
+    app.tooltip.register(&app.port.tray_check, "Collapse to system tray when this window is closed");
+    app.tooltip.register(&app.port.revert_button, "Reload settings from file");
+    app.tooltip.register(&app.port.save_button, "Save settings to file");
     let logger = Logger { buf: app.log_buf.clone(), sender: app.log_notice.sender() };
     let join_sender = app.join_notice.sender();
     let leave_sender = app.leave_notice.sender();
