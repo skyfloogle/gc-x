@@ -1,4 +1,4 @@
-edition = "2018" # rust
+edition = "2024" # rust
 max_width = 120  # line width
 
 # Error if cannot get line into `max_width` boundaries.
