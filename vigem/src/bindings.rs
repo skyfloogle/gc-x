@@ -30,7 +30,6 @@ pub const _XUSB_BUTTON_XUSB_GAMEPAD_B: _XUSB_BUTTON = 8192;
 pub const _XUSB_BUTTON_XUSB_GAMEPAD_X: _XUSB_BUTTON = 16384;
 pub const _XUSB_BUTTON_XUSB_GAMEPAD_Y: _XUSB_BUTTON = 32768;
 pub type _XUSB_BUTTON = ::std::os::raw::c_uint;
-pub use self::_XUSB_BUTTON as XUSB_BUTTON;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct _XUSB_REPORT {

@@ -176,10 +176,10 @@ impl Daemon {
                         buttons: buttons.bits(),
                         left_trigger: pad.trigger_left,
                         right_trigger: pad.trigger_right,
-                        left_x: deadstick(pad.stick_x, center.0.0),
-                        left_y: deadstick(pad.stick_y, center.0.1),
-                        right_x: deadstick(pad.cstick_x, center.1.0),
-                        right_y: deadstick(pad.cstick_y, center.1.1),
+                        left_x: deadstick(pad.stick_x, center.0 .0),
+                        left_y: deadstick(pad.stick_y, center.0 .1),
+                        right_x: deadstick(pad.cstick_x, center.1 .0),
+                        right_y: deadstick(pad.cstick_y, center.1 .1),
                     };
                     if let Err(e) = target.update(&report) {
                         log!(self.logger, "Failed to update target: {}", e);

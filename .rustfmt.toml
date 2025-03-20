@@ -1,5 +1,4 @@
 edition = "2018" # rust
-version = "Two"  # formatting preset
 max_width = 120  # line width
 
 # Error if cannot get line into `max_width` boundaries.

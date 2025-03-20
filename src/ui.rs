@@ -473,6 +473,7 @@ impl App {
 }
 
 pub struct UiInfo {
+    #[allow(unused, reason = "The UI container, while not accessed directly, maintains the UI state")]
     pub app: app_ui::AppUi,
     pub logger: Logger,
     pub join_sender: nwg::NoticeSender,

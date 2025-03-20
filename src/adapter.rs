@@ -4,7 +4,7 @@
 use crate::{config::GButton, log, ui};
 use native_windows_gui as nwg;
 use parking_lot::{Condvar, Mutex, Once};
-use rusb::{constants::LIBUSB_DT_HID, Context, Device, DeviceHandle, Hotplug, UsbContext};
+use rusb::{constants::LIBUSB_DT_HID, Context, Device, DeviceHandle, Hotplug, HotplugBuilder, UsbContext};
 use std::{convert::TryInto, sync::Arc, time::Duration};
 
 const ADAPTER_VENDOR_ID: u16 = 0x057e;
@@ -50,12 +50,11 @@ impl GCAdapterWaiter {
         let context = rusb::Context::new()?;
         let adapter = Arc::new((Mutex::new(None), Condvar::new()));
         let hotplug_reg = if rusb::has_hotplug() {
-            match context.register_callback(
-                Some(ADAPTER_VENDOR_ID),
-                Some(ADAPTER_PRODUCT_ID),
-                None,
-                Box::new(HotplugCallback { adapter: adapter.clone() }),
-            ) {
+            match HotplugBuilder::new()
+                .vendor_id(ADAPTER_PRODUCT_ID)
+                .product_id(ADAPTER_PRODUCT_ID)
+                .register(&context, Box::new(HotplugCallback { adapter: adapter.clone() }))
+            {
                 Ok(reg) => {
                     log!(logger, "Using libusb hotplug detection.");
                     Some(reg)
@@ -87,7 +86,7 @@ impl GCAdapterWaiter {
             };
             if descriptor.vendor_id() == ADAPTER_VENDOR_ID && descriptor.product_id() == ADAPTER_PRODUCT_ID {
                 log!(self.logger, "Found GC adapter, opening...");
-                let mut handle = match device.open() {
+                let handle = match device.open() {
                     Ok(handle) => handle,
                     Err(rusb::Error::Access) => {
                         log!(
