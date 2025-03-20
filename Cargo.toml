@@ -13,13 +13,13 @@ bitflags = "1.2"
 itertools = "0.10"
 native-windows-derive = "1.0"
 native-windows-gui = "1.0"
-open = "2.0"
-parking_lot = "0.11"
-rusb = "0.8"
-rust-ini = "0.17"
+open = "5.3"
+parking_lot = "0.12"
+rusb = "0.9"
+rust-ini = "0.21"
 vigem = { path = "vigem" }
 winapi = { version = "0.3", features = ["playsoundapi", "winuser"] }
 
 [build-dependencies]
 time = "0.3"
-winres = "0.1.11"
+tauri-winres = "0.3.0"

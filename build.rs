@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rustc-env=GIT_HASH={}", git_hash);
 
     // icon
-    let mut res = winres::WindowsResource::new();
+    let mut res = tauri_winres::WindowsResource::new();
     res.set_icon_with_id("assets/icon.ico", "icon")
         .set("FileDescription", "GC-X")
         .set("ProductName", "GC-X")
