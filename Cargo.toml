@@ -10,7 +10,7 @@ lto = true
 
 [dependencies]
 bitflags = "2.9"
-itertools = "0.10"
+itertools = "0.13"
 native-windows-derive = "1.0"
 native-windows-gui = "1.0"
 open = "5.3"
