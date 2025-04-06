@@ -9,7 +9,7 @@ codegen-units = 1
 lto = true
 
 [dependencies]
-bitflags = "1.2"
+bitflags = "2.9"
 itertools = "0.10"
 native-windows-derive = "1.0"
 native-windows-gui = "1.0"

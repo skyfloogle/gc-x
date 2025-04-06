@@ -20,6 +20,7 @@ macro_rules! log {
 }
 
 bitflags::bitflags! {
+    #[derive(Clone, Copy)]
     pub struct XButton: u16 {
         const DPAD_UP = 0x0001;
         const DPAD_DOWN = 0x0002;
@@ -40,6 +41,7 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
+    #[derive(Clone, Copy)]
     pub struct GButton: u16 {
         const A = 0x0001;
         const B = 0x0002;
