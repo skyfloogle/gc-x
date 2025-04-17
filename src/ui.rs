@@ -1,12 +1,12 @@
-use crate::config::{xbutton_names, Config};
+use crate::config::{Config, xbutton_names};
 use native_windows_derive::{NwgPartial, NwgUi};
 use native_windows_gui as nwg;
 use native_windows_gui::{
+    CheckBoxState,
     stretch::{
         geometry::Size,
         style::{Dimension, FlexDirection},
     },
-    CheckBoxState,
 };
 use nwg::NativeUi;
 use parking_lot::{Mutex, Once};

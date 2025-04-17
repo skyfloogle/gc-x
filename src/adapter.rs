@@ -4,7 +4,7 @@
 use crate::{config::GButton, log, ui};
 use native_windows_gui as nwg;
 use parking_lot::{Condvar, Mutex, Once};
-use rusb::{constants::LIBUSB_DT_HID, Context, Device, DeviceHandle, Hotplug, HotplugBuilder, UsbContext};
+use rusb::{Context, Device, DeviceHandle, Hotplug, HotplugBuilder, UsbContext, constants::LIBUSB_DT_HID};
 use std::{convert::TryInto, sync::Arc, time::Duration};
 
 const ADAPTER_VENDOR_ID: u16 = 0x057e;

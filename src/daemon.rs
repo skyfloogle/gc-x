@@ -5,7 +5,10 @@ use crate::{
 };
 use native_windows_gui as nwg;
 use parking_lot::{Mutex, Once};
-use std::sync::Arc;
+use std::{
+    f64::consts::{PI, TAU},
+    sync::Arc,
+};
 use vigem::{Target, UsbReport};
 
 const INFO_STRINGS: [&str; 2] =
@@ -22,6 +25,23 @@ pub struct Daemon {
     join_sender: nwg::NoticeSender,
     leave_sender: nwg::NoticeSender,
 }
+
+// Maths functions and controller constants graciously lifted from Dolphin
+fn square_radius_at_angle(angle: f64) -> f64 {
+    let section_angle = TAU / 4.0;
+    1.0 / (((angle + section_angle / 2.0) % section_angle) - section_angle / 2.0).cos()
+}
+
+fn octagon_radius_at_angle(angle: f64) -> f64 {
+    let sides = 8.0;
+    let sum_int_angles = (sides - 2.0) * PI;
+    let half_int_angle = sum_int_angles / sides / 2.0;
+
+    let angle = angle % (TAU / sides);
+    1.0 / (PI - angle - half_int_angle).sin() * half_int_angle.sin()
+}
+const MAIN_STICK_GATE_RADIUS: f64 = 0.7937125;
+const C_STICK_GATE_RADIUS: f64 = 0.7221375;
 
 impl Daemon {
     pub fn new(
@@ -69,7 +89,7 @@ impl Daemon {
         let rumbles = Arc::new(Mutex::new([0; 4]));
         let mut centers: [((i16, i16), (i16, i16)); 4] = Default::default();
 
-        let transform = |ax| (i16::from(ax) - 0x80 << 8) + i16::from(ax);
+        let transform = |ax| ((i16::from(ax) - 0x80) << 8) + i16::from(ax);
 
         'outer: loop {
             let pads = self.waiter.get_pads();
@@ -165,21 +185,31 @@ impl Daemon {
 
                     let deadstick = |ax, center: i16| match transform(ax) - center {
                         ax if ax.abs()
-                            < (f32::from(i16::MAX) * f32::from(self.config.lock().deadzone) / 100.0) as _ =>
+                            < (f64::from(i16::MAX) * f64::from(self.config.lock().deadzone) / 100.0) as _ =>
                         {
                             0
                         },
                         ax => ax,
                     };
 
+                    let scale = |x, y, center: (i16, i16), radius: f64| -> (i16, i16) {
+                        let deaded = (deadstick(x, center.0), deadstick(y, center.1));
+                        let angle = f64::from(deaded.1).atan2(deaded.1.into());
+                        let factor = square_radius_at_angle(angle) / (octagon_radius_at_angle(angle) * radius);
+                        ((f64::from(deaded.0) * factor) as _, (f64::from(deaded.1) * factor) as _)
+                    };
+
+                    let (left_x, left_y) = scale(pad.stick_x, pad.stick_y, center.0, MAIN_STICK_GATE_RADIUS);
+                    let (right_x, right_y) = scale(pad.cstick_x, pad.cstick_y, center.1, C_STICK_GATE_RADIUS);
+
                     let report = UsbReport {
                         buttons: buttons.bits(),
                         left_trigger: pad.trigger_left,
                         right_trigger: pad.trigger_right,
-                        left_x: deadstick(pad.stick_x, center.0 .0),
-                        left_y: deadstick(pad.stick_y, center.0 .1),
-                        right_x: deadstick(pad.cstick_x, center.1 .0),
-                        right_y: deadstick(pad.cstick_y, center.1 .1),
+                        left_x,
+                        left_y,
+                        right_x,
+                        right_y,
                     };
                     if let Err(e) = target.update(&report) {
                         log!(self.logger, "Failed to update target: {}", e);
