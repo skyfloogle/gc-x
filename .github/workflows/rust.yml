@@ -16,29 +16,33 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         submodules: true
-    - uses: actions-rs/toolchain@v1
+    - uses: dtolnay/rust-toolchain@stable
       with:
-        target: x86_64-pc-windows-msvc
-        toolchain: stable
-        default: true
-    - name: Build 64-bit
-      run: cargo build --release --verbose
-    - name: Upload 64-bit
-      uses: actions/upload-artifact@v2
+        targets: x86_64-pc-windows-msvc, aarch64-pc-windows-msvc, i686-pc-windows-msvc
+
+    - name: Build x64
+      run: cargo build --release --verbose --target=x86_64-pc-windows-msvc
+    - name: Upload x64
+      uses: actions/upload-artifact@v4
       with:
         name: gc-x_x64
-        path: target/release/gc-x.exe
-    - uses: actions-rs/toolchain@v1
+        path: target/x86_64-pc-windows-msvc/release/gc-x.exe
+
+    - name: Build arm64
+      run: cargo build --release --verbose --target=aarch64-pc-windows-msvc
+    - name: Upload arm64
+      uses: actions/upload-artifact@v4
       with:
-        target: i686-pc-windows-msvc
-        toolchain: stable
-    - name: Build 32-bit
+        name: gc-x_arm64
+        path: target/aarch64-pc-windows-msvc/release/gc-x.exe
+
+    - name: Build x86
       run: cargo build --release --verbose --target=i686-pc-windows-msvc
-    - name: Upload 32-bit
-      uses: actions/upload-artifact@v2
+    - name: Upload x86
+      uses: actions/upload-artifact@v4
       with:
         name: gc-x_x86
         path: target/i686-pc-windows-msvc/release/gc-x.exe
