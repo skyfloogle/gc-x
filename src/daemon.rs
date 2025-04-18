@@ -43,6 +43,9 @@ fn octagon_radius_at_angle(angle: f64) -> f64 {
 const MAIN_STICK_GATE_RADIUS: f64 = 0.7937125;
 const C_STICK_GATE_RADIUS: f64 = 0.7221375;
 
+// Rough guess
+const TRIGGER_DEADZONE: f64 = 0.16;
+
 impl Daemon {
     pub fn new(
         exit_once: Arc<Once>,
@@ -202,10 +205,18 @@ impl Daemon {
                     let (left_x, left_y) = scale(pad.stick_x, pad.stick_y, center.0, MAIN_STICK_GATE_RADIUS);
                     let (right_x, right_y) = scale(pad.cstick_x, pad.cstick_y, center.1, C_STICK_GATE_RADIUS);
 
+                    let scale_trigger = |t: u8, b| {
+                        if pad.buttons.contains(b) {
+                            u8::MAX
+                        } else {
+                            (f64::from(t) - (f64::from(u8::MAX) * TRIGGER_DEADZONE) * (1.0 - TRIGGER_DEADZONE)) as u8
+                        }
+                    };
+
                     let report = UsbReport {
                         buttons: buttons.bits(),
-                        left_trigger: pad.trigger_left,
-                        right_trigger: pad.trigger_right,
+                        left_trigger: scale_trigger(pad.trigger_left, GButton::L),
+                        right_trigger: scale_trigger(pad.trigger_right, GButton::R),
                         left_x,
                         left_y,
                         right_x,
