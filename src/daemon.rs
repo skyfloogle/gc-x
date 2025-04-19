@@ -209,7 +209,7 @@ impl Daemon {
                         if pad.buttons.contains(b) {
                             u8::MAX
                         } else {
-                            (f64::from(t) - (f64::from(u8::MAX) * TRIGGER_DEADZONE) * (1.0 - TRIGGER_DEADZONE)) as u8
+                            ((f64::from(t) - (f64::from(u8::MAX) * TRIGGER_DEADZONE)) * (1.0 - TRIGGER_DEADZONE)) as u8
                         }
                     };
 
