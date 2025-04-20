@@ -46,3 +46,14 @@ jobs:
       with:
         name: gc-x_x86
         path: target/i686-pc-windows-msvc/release/gc-x.exe
+
+    - name: Set up bundle
+      run: |
+        copy target/x86_64-pc-windows-msvc/release/gc-x.exe gc-x_x64.exe
+        copy target/aarch64-pc-windows-msvc/release/gc-x.exe gc-x_arm64.exe
+        copy target/i686-pc-windows-msvc/release/gc-x.exe gc-x_x86.exe
+    - name: Upload bundle
+      uses: actions/upload-artifact@v4
+      with:
+        name: bundle
+        path: gc-x_*.exe
