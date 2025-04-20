@@ -20,4 +20,4 @@ This part of the setup is described [here](https://dolphin-emu.org/docs/guides/h
 If you already use your adapter with Dolphin, you will already have done this.
 
 The controller emulation also requires [VIGEmBus](https://github.com/ViGEm/ViGEmBus/releases) to be installed.
-If you've used Parsec before, this will probably already be installed.
+**Keep in mind that this driver is currently unmaintained.**
