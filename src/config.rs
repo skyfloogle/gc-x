@@ -58,7 +58,7 @@ bitflags::bitflags! {
     }
 }
 
-pub const XBUTTONS: [(&str, XButton); 11] = [
+pub const XBUTTONS: [(&str, XButton); 15] = [
     ("A", XButton::A),
     ("B", XButton::B),
     ("X", XButton::X),
@@ -70,24 +70,32 @@ pub const XBUTTONS: [(&str, XButton); 11] = [
     ("LS", XButton::LEFT_THUMB),
     ("RS", XButton::RIGHT_THUMB),
     ("Guide", XButton::GUIDE),
+    ("Left", XButton::DPAD_LEFT),
+    ("Right", XButton::DPAD_RIGHT),
+    ("Up", XButton::DPAD_UP),
+    ("Down", XButton::DPAD_DOWN),
 ];
 
 pub fn xbutton_names() -> Vec<&'static str> {
     XBUTTONS.iter().copied().map(|(name, _)| name).collect()
 }
 
-pub const GBUTTONS: [(&str, GButton); 6] = [
+pub const GBUTTONS: [(&str, GButton); 10] = [
     ("A", GButton::A),
     ("B", GButton::B),
     ("X", GButton::X),
     ("Y", GButton::Y),
     ("Z", GButton::Z),
     ("Start", GButton::START),
+    ("Left", GButton::DPAD_LEFT),
+    ("Right", GButton::DPAD_RIGHT),
+    ("Up", GButton::DPAD_UP),
+    ("Down", GButton::DPAD_DOWN),
 ];
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Config {
-    pub buttons: [usize; 6],
+    pub buttons: [usize; GBUTTONS.len()],
     pub auto_recenter: bool,
     pub deadzone: u8,
     pub close_to_tray: bool,
@@ -95,7 +103,7 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Self { buttons: [0, 2, 1, 3, 5, 7], auto_recenter: false, deadzone: 5, close_to_tray: true }
+        Self { buttons: [0, 2, 1, 3, 5, 7, 11, 12, 13, 14], auto_recenter: false, deadzone: 5, close_to_tray: true }
     }
 }
 

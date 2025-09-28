@@ -1,4 +1,4 @@
-use crate::config::{Config, xbutton_names};
+use crate::config::{Config, GBUTTONS, xbutton_names};
 use native_windows_derive::{NwgPartial, NwgUi};
 use native_windows_gui as nwg;
 use native_windows_gui::{
@@ -84,40 +84,72 @@ pub struct Port {
     #[nwg_layout_item(layout: layout, col: 1, row: 8)]
     st_map: nwg::ComboBox<&'static str>,
 
-    #[nwg_control(text: "Recenter:")]
+    #[nwg_control(text: "Left")]
     #[nwg_layout_item(layout: layout, col: 0, row: 9)]
+    l_label: nwg::Label,
+
+    #[nwg_control(collection: xbutton_names(), selected_index: Some(11))]
+    #[nwg_layout_item(layout: layout, col: 0, row: 10)]
+    l_map: nwg::ComboBox<&'static str>,
+
+    #[nwg_control(text: "Right")]
+    #[nwg_layout_item(layout: layout, col: 1, row: 9)]
+    r_label: nwg::Label,
+
+    #[nwg_control(collection: xbutton_names(), selected_index: Some(12))]
+    #[nwg_layout_item(layout: layout, col: 1, row: 10)]
+    r_map: nwg::ComboBox<&'static str>,
+
+    #[nwg_control(text: "Up")]
+    #[nwg_layout_item(layout: layout, col: 0, row: 11)]
+    u_label: nwg::Label,
+
+    #[nwg_control(collection: xbutton_names(), selected_index: Some(13))]
+    #[nwg_layout_item(layout: layout, col: 0, row: 12)]
+    u_map: nwg::ComboBox<&'static str>,
+
+    #[nwg_control(text: "Down")]
+    #[nwg_layout_item(layout: layout, col: 1, row: 11)]
+    d_label: nwg::Label,
+
+    #[nwg_control(collection: xbutton_names(), selected_index: Some(14))]
+    #[nwg_layout_item(layout: layout, col: 1, row: 12)]
+    d_map: nwg::ComboBox<&'static str>,
+
+    #[nwg_control(text: "Recenter:")]
+    #[nwg_layout_item(layout: layout, col: 0, row: 13)]
     recenter_label: nwg::Label,
 
     #[nwg_control(text: "On join")]
-    #[nwg_layout_item(layout: layout, col: 1, row: 9)]
+    #[nwg_layout_item(layout: layout, col: 1, row: 13)]
     recenter_check: nwg::CheckBox,
 
     #[nwg_control(text: "P1", enabled: false)]
-    #[nwg_layout_item(layout: layout, col: 0, row: 10)]
+    #[nwg_layout_item(layout: layout, col: 0, row: 14)]
     recenter_p1: nwg::Button,
 
     #[nwg_control(text: "P2", enabled: false)]
-    #[nwg_layout_item(layout: layout, col: 1, row: 10)]
+    #[nwg_layout_item(layout: layout, col: 1, row: 14)]
     recenter_p2: nwg::Button,
 
     #[nwg_control(text: "P3", enabled: false)]
-    #[nwg_layout_item(layout: layout, col: 0, row: 11)]
+    #[nwg_layout_item(layout: layout, col: 0, row: 15)]
     recenter_p3: nwg::Button,
 
     #[nwg_control(text: "P4", enabled: false)]
-    #[nwg_layout_item(layout: layout, col: 1, row: 11)]
+    #[nwg_layout_item(layout: layout, col: 1, row: 15)]
     recenter_p4: nwg::Button,
 
     #[nwg_control(text: "Collapse to tray")]
-    #[nwg_layout_item(layout: layout, col: 0, row: 12, col_span: 2)]
+    #[nwg_layout_item(layout: layout, col: 0, row: 16, col_span: 2)]
     tray_check: nwg::CheckBox,
 
     #[nwg_control(text: "Reload settings", enabled: false)]
-    #[nwg_layout_item(layout: layout, col: 0, row: 13, col_span: 2)]
+    #[nwg_layout_item(layout: layout, col: 0, row: 17, col_span: 2)]
     revert_button: nwg::Button,
 
     #[nwg_control(text: "Save changes", enabled: false)]
-    #[nwg_layout_item(layout: layout, col: 0, row: 14, col_span: 2)]
+    #[nwg_layout_item(layout: layout, col: 0, row: 18, col_span: 2)]
     save_button: nwg::Button,
 }
 
@@ -274,14 +306,19 @@ impl App {
         self.port.save_button.set_enabled(true);
         // if it's already locked then it's being modified elsewhere
         if let Some(mut config) = self.config.try_lock() {
-            for (but, cb) in config.buttons.iter_mut().zip([
+            let button_boxes: [_; GBUTTONS.len()] = [
                 &self.port.a_map,
                 &self.port.b_map,
                 &self.port.x_map,
                 &self.port.y_map,
                 &self.port.z_map,
                 &self.port.st_map,
-            ]) {
+                &self.port.l_map,
+                &self.port.r_map,
+                &self.port.u_map,
+                &self.port.d_map,
+            ];
+            for (but, cb) in config.buttons.iter_mut().zip(button_boxes) {
                 if let Some(sel) = cb.selection() {
                     *but = sel;
                 }
