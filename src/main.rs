@@ -31,7 +31,7 @@ fn main() {
         Ok(ui) => ui,
         Err(e) => {
             ui::show_error("Could not initialize UI", &format!("Could not initialize UI: {}", e));
-            return
+            return;
         },
     };
     let logger = ui.logger.clone();
@@ -61,7 +61,7 @@ fn main() {
                     Err(()) => {
                         exit_once.call_once(|| ());
                         wait_for_init.1.notify_all();
-                        return
+                        return;
                     },
                 };
                 *wait_for_init.0.lock() = true;
@@ -80,7 +80,7 @@ fn main() {
     }
 
     if exit_once.state().done() {
-        return
+        return;
     }
 
     ui::run_ui();

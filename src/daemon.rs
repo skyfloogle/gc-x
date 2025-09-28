@@ -66,11 +66,11 @@ impl Daemon {
                     "Error: GC Adapter driver not installed",
                     "You haven't correctly installed the adapter driver.",
                 );
-                return Err(())
+                return Err(());
             },
             Err(e) => {
                 ui::show_error("Error", &format!("Could not initialize libusb: {}", e));
-                return Err(())
+                return Err(());
             },
         };
         let mut vigem = vigem::Client::new();
@@ -81,7 +81,7 @@ impl Daemon {
                 },
                 e => ui::show_error("Error", &format!("Could not connect to VigEmBus: {}", e)),
             }
-            return Err(())
+            return Err(());
         }
         Ok(Self { exit_once, waiter, vigem, logger, config, must_center, joy_connected, join_sender, leave_sender })
     }
@@ -97,7 +97,7 @@ impl Daemon {
         'outer: loop {
             let pads = self.waiter.get_pads();
             if self.exit_once.state().done() {
-                break
+                break;
             }
             for (i, pad_opt, target_opt, notif, center, must_center, connected) in itertools::izip!(
                 0..,
@@ -118,7 +118,7 @@ impl Daemon {
                         let mut target = Target::new();
                         if let Err(e) = self.vigem.add_target(&mut target) {
                             log!(self.logger, "Could not add target: {}", e);
-                            continue 'outer
+                            continue 'outer;
                         }
 
                         let rumbles = rumbles.clone();

@@ -106,11 +106,11 @@ impl Config {
             Ok(ini) => ini,
             Err(ini::Error::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => {
                 log!(logger, "{} doesn't exist, using defaults.", CONFIG_PATH);
-                return config
+                return config;
             },
             Err(e) => {
                 log!(logger, "Couldn't load settings: {}\r\nUsing defaults.", e);
-                return config
+                return config;
             },
         };
         if let Some(buttons) = ini.section(Some(section::BUTTONS)) {

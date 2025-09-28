@@ -98,7 +98,7 @@ impl GCAdapterWaiter {
                             descriptor.vendor_id(),
                             descriptor.product_id()
                         );
-                        return None
+                        return None;
                     },
                     Err(rusb::Error::NotSupported) => {
                         ui::show_error(
@@ -108,11 +108,11 @@ impl GCAdapterWaiter {
                             Please install the driver with Zadig and try again.",
                         );
                         self.exit_sender.notice();
-                        return None
+                        return None;
                     },
                     Err(e) => {
                         log!(self.logger, "ERROR: couldn't open: {}", e);
-                        return None
+                        return None;
                     },
                 };
 
@@ -120,14 +120,14 @@ impl GCAdapterWaiter {
                     Ok(true) => {
                         if let Err(e) = handle.detach_kernel_driver(0) {
                             log!(self.logger, "ERROR: couldn't detach kernel driver: {}", e);
-                            return None
+                            return None;
                         }
                     },
                     Ok(false) => (),
                     Err(rusb::Error::NotSupported) => (),
                     Err(e) => {
                         log!(self.logger, "Error: couldn't check if kernel driver was active: {}", e);
-                        return None
+                        return None;
                     },
                 }
 
@@ -136,7 +136,7 @@ impl GCAdapterWaiter {
                     Ok(_) | Err(rusb::Error::Pipe) => (), // mayflash
                     Err(e) => {
                         log!(self.logger, "ERROR: Unexpected error in Nyko compat: {}", e);
-                        return None
+                        return None;
                     },
                 }
 
@@ -180,10 +180,10 @@ impl GCAdapterWaiter {
             *self.newly_none.lock() = true;
             *adapter_guard = Some(loop {
                 if self.exit_once.state().done() {
-                    return
+                    return;
                 }
                 if let Some(adapter) = self.try_connect_controller().unwrap() {
-                    break adapter
+                    break adapter;
                 }
                 if self.hotplug_reg.is_some() {
                     cvar.wait(&mut adapter_guard);
@@ -207,7 +207,7 @@ impl GCAdapterWaiter {
             if *newly_none {
                 log!(self.logger, "GC adapter disconnected.");
                 *newly_none = false;
-                return Default::default()
+                return Default::default();
             } else {
                 drop(newly_none);
                 self.wait_for_controller();
@@ -247,15 +247,15 @@ impl GCAdapter {
             Ok(_) => return Some(Default::default()), // might happen a few times on init
             Err(rusb::Error::NoDevice) => {
                 log!(logger, "GC adapter disconnected.");
-                return None
+                return None;
             },
             Err(rusb::Error::Pipe) => {
                 log!(logger, "Endpoint halted, will attempt to reconnect.");
-                return None
+                return None;
             },
             Err(e) => {
                 log!(logger, "Failed to read from adapter: {}", e);
-                return Some(Default::default())
+                return Some(Default::default());
             },
         }
 
