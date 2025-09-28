@@ -1,3 +1,7 @@
 target
 .idea
 gc-x.ini
+build
+.vscode
+*.exe
+*.zip
