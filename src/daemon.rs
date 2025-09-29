@@ -160,17 +160,6 @@ impl Daemon {
                 }
                 if let (Some(pad), Some(target)) = (pad_opt.as_ref(), target_opt.as_mut()) {
                     let mut buttons = XButton::empty();
-                    // dpad
-                    for (gc, xb) in [
-                        (GButton::DPAD_LEFT, XButton::DPAD_LEFT),
-                        (GButton::DPAD_RIGHT, XButton::DPAD_RIGHT),
-                        (GButton::DPAD_UP, XButton::DPAD_UP),
-                        (GButton::DPAD_DOWN, XButton::DPAD_DOWN),
-                    ] {
-                        if pad.buttons.contains(gc) {
-                            buttons.insert(xb);
-                        }
-                    }
                     for (gc, xb) in self.config.lock().buttons.iter().enumerate() {
                         if pad.buttons.contains(config::GBUTTONS[gc].1) {
                             buttons.insert(config::XBUTTONS[*xb].1);
