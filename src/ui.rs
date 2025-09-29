@@ -212,6 +212,10 @@ pub struct App {
         (y_map, OnComboxBoxSelection): [App::modify],
         (z_map, OnComboxBoxSelection): [App::modify],
         (st_map, OnComboxBoxSelection): [App::modify],
+        (l_map, OnComboxBoxSelection): [App::modify],
+        (r_map, OnComboxBoxSelection): [App::modify],
+        (u_map, OnComboxBoxSelection): [App::modify],
+        (d_map, OnComboxBoxSelection): [App::modify],
         (tray_check, OnButtonClick): [App::modify],
         (recenter_check, OnButtonClick): [App::modify],
         (revert_button, OnButtonClick): [App::revert_config],
@@ -375,6 +379,10 @@ impl App {
             &self.port.y_map,
             &self.port.z_map,
             &self.port.st_map,
+            &self.port.l_map,
+            &self.port.r_map,
+            &self.port.u_map,
+            &self.port.d_map,
         ]) {
             cb.set_selection(Some(*but));
         }
@@ -571,6 +579,10 @@ pub fn init_app(
     app.tooltip.register(&app.port.y_map, "Xbox button to map to Y on the GameCube controller");
     app.tooltip.register(&app.port.z_map, "Xbox button to map to Z on the GameCube controller");
     app.tooltip.register(&app.port.st_map, "Xbox button to map to Start on the GameCube controller");
+    app.tooltip.register(&app.port.l_map, "Xbox button to map to D-Pad Left on the GameCube controller");
+    app.tooltip.register(&app.port.r_map, "Xbox button to map to D-Pad Right on the GameCube controller");
+    app.tooltip.register(&app.port.u_map, "Xbox button to map to D-Pad Up on the GameCube controller");
+    app.tooltip.register(&app.port.d_map, "Xbox button to map to D-Pad Down on the GameCube controller");
     app.tooltip.register(&app.port.recenter_p1, "Recenter P1 joysticks");
     app.tooltip.register(&app.port.recenter_p2, "Recenter P2 joysticks");
     app.tooltip.register(&app.port.recenter_p3, "Recenter P3 joysticks");
